@@ -89,7 +89,7 @@ const AuthPage = () => {
             disabled={isAuthenticating}
             variant='outline'
             className='py-6 border-2 flex space-x-3'
-            onClick={() => socialAuth('google')}
+            // onClick={() => socialAuth('google')}
           >
             <FcGoogle size={30} />
             <Typography
@@ -102,7 +102,7 @@ const AuthPage = () => {
             disabled={isAuthenticating}
             variant='outline'
             className='py-6 border-2 flex space-x-3'
-            onClick={() => socialAuth('github')}
+            // onClick={() => socialAuth('github')}
           >
             <RxGithubLogo size={30} />
             <Typography

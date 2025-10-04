@@ -29,6 +29,22 @@ const AuthPage = () => {
   const [isMounted, setIsMounted] = useState(false);
 
   const router = useRouter();
+
+  useEffect(() => {
+    const getCurrUser = async () => {
+      const {
+        data: { session },
+      } = await supabaseBrowserClient.auth.getSession();
+
+      if (session) {
+        return router.push('/');
+      }
+    };
+
+    getCurrUser();
+    setIsMounted(true);
+  }, [router]);
+
   const formSchema = z.object({
     email: z.string().email().min(2, { message: 'Email must be 2 characters' }),
   });
@@ -40,8 +56,7 @@ const AuthPage = () => {
     },
   });
 
-    async function onSubmit(values: z.infer<typeof formSchema>) {
-      console.log(values)
+  async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsAuthenticating(true);
     const response = await registerWithEmail(values);
     const { data, error } = JSON.parse(response);
@@ -52,7 +67,7 @@ const AuthPage = () => {
     }
   }
 
-    async function socialAuth(provider: Provider) {
+  async function socialAuth(provider: Provider) {
     setIsAuthenticating(true);
     await supabaseBrowserClient.auth.signInWithOAuth({
       provider,
@@ -63,6 +78,7 @@ const AuthPage = () => {
     setIsAuthenticating(false);
   }
 
+  if (!isMounted) return null;
 
   return (
     <div className='min-h-screen p-5 grid text-center place-content-center bg-white'>
@@ -98,7 +114,7 @@ const AuthPage = () => {
               variant='p'
             />
           </Button>
-                    <Button
+          <Button
             disabled={isAuthenticating}
             variant='outline'
             className='py-6 border-2 flex space-x-3'
@@ -111,7 +127,6 @@ const AuthPage = () => {
               variant='p'
             />
           </Button>
-
         </div>
 
         <div>
@@ -138,10 +153,11 @@ const AuthPage = () => {
                 />
 
                 <Button
-                  className='bg-amber-300'
+                  variant='secondary'
+                  className='bg-primary-dark hover:bg-primary-dark/90 w-full my-5 text-white'
                   type='submit'
                 >
-                  <Typography text='Sign in with Email'  />
+                  <Typography text='Sign in with Email' variant='p' />
                 </Button>
 
                 <div className='px-5 py-4 bg-gray-100 rounded-sm'>

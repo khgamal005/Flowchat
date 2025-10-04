@@ -11,13 +11,11 @@ export default function supabaseServerClientPages(
     {
       cookies: {
         // Return all cookies as an array { name, value }
-        async getAll() {
-          return Object.entries(req.cookies)
-            .filter(([_, value]) => typeof value === "string")
-            .map(([name, value]) => ({
-              name,
-              value: value as string,
-            }));
+        getAll() {
+          return Object.entries(req.cookies).map(([name, value]) => ({
+            name,
+            value,
+          }));
         },
 
         // Accept an array of cookies to set

@@ -5,38 +5,31 @@ import { type CookieOptions, createServerClient } from '@supabase/ssr';
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get('code');
+  // if "next" is in param, use it as the redirect URL
+  //   const next = searchParams.get('next') ?? '/';
 
   if (code) {
-    const cookieStorePromise = cookies();
-
+    const cookieStore = cookies();
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         cookies: {
-          // return all cookies as an array
-          async getAll() {
-            const cookieStore = await cookieStorePromise;
-            return cookieStore.getAll().map(c => ({
-              name: c.name,
-              value: c.value,
-            }));
+          get(name: string) {
+            return cookieStore.get(name)?.value;
           },
-          // set multiple cookies at once
-          async setAll(cookiesToSet) {
-            const cookieStore = await cookieStorePromise;
-            cookiesToSet.forEach(({ name, value, options }: { name: string; value: string; options?: CookieOptions }) => {
-              cookieStore.set({ name, value, ...options });
-            });
+          set(name: string, value: string, options: CookieOptions) {
+            cookieStore.set({ name, value, ...options });
+          },
+          remove(name: string, options: CookieOptions) {
+            cookieStore.delete({ name, ...options });
           },
         },
       }
     );
-
     const { error } = await supabase.auth.exchangeCodeForSession(code);
-
     if (!error) {
-      return NextResponse.redirect(`${origin}`);
+      return NextResponse.redirect(`${origin}`); // Changed from `${origin}${next}`
     }
   }
 

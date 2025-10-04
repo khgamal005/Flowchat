@@ -29,39 +29,6 @@ const AuthPage = () => {
   const [isMounted, setIsMounted] = useState(false);
 
   const router = useRouter();
-  const formSchema = z.object({
-    email: z.string().email().min(2, { message: 'Email must be 2 characters' }),
-  });
-
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      email: '',
-    },
-  });
-
-    async function onSubmit(values: z.infer<typeof formSchema>) {
-      console.log(values)
-    setIsAuthenticating(true);
-    const response = await registerWithEmail(values);
-    const { data, error } = JSON.parse(response);
-    setIsAuthenticating(false);
-    if (error) {
-      console.warn('Sign in error', error);
-      return;
-    }
-  }
-
-    async function socialAuth(provider: Provider) {
-    setIsAuthenticating(true);
-    await supabaseBrowserClient.auth.signInWithOAuth({
-      provider,
-      options: {
-        redirectTo: `${location.origin}/auth/callback`,
-      },
-    });
-    setIsAuthenticating(false);
-  }
 
 
   return (
@@ -89,25 +56,12 @@ const AuthPage = () => {
             disabled={isAuthenticating}
             variant='outline'
             className='py-6 border-2 flex space-x-3'
-            onClick={() => socialAuth('google')}
+            // onClick={() => socialAuth('google')}
           >
             <FcGoogle size={30} />
             <Typography
               className='text-xl'
               text='Sign in with Google'
-              variant='p'
-            />
-          </Button>
-                    <Button
-            disabled={isAuthenticating}
-            variant='outline'
-            className='py-6 border-2 flex space-x-3'
-            onClick={() => socialAuth('github')}
-          >
-            <RxGithubLogo size={30} />
-            <Typography
-              className='text-xl'
-              text='Sign in with Github'
               variant='p'
             />
           </Button>
@@ -138,10 +92,11 @@ const AuthPage = () => {
                 />
 
                 <Button
-                  className='bg-amber-300'
+                  variant='secondary'
+                  className='bg-primary-dark hover:bg-primary-dark/90 w-full my-5 text-white'
                   type='submit'
                 >
-                  <Typography text='Sign in with Email'  />
+                  <Typography text='Sign in with Email' variant='p' />
                 </Button>
 
                 <div className='px-5 py-4 bg-gray-100 rounded-sm'>
