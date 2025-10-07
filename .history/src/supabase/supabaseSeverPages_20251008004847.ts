@@ -1,6 +1,7 @@
+"use server";
 
 import type { NextApiRequest, NextApiResponse } from "next";
-import { createServerClient, serialize, type CookieOptions } from "@supabase/ssr";
+import { createServerClient, serialize, } from "@supabase/ssr";
 
 export default function supabaseServerClientPages(
   req: NextApiRequest,

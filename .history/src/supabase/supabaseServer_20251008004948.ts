@@ -18,7 +18,9 @@ export async function supabaseServerClient() {
           }));
         },
         setAll() {
-         
+          cookiesToSet.forEach(({ name, value, options }) => {
+            cookieStore.set({ name, value, ...options });
+          });
         },
       },
     }

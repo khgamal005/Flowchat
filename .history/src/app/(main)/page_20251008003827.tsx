@@ -7,13 +7,9 @@ export default async function   Home() {
 
     const userData = await getUserData();
 
-  // if (!userData) return redirect('/auth');
 
-  // const userWorkspaceId = userData.workspaces?.[0];
 
-  // if (!userWorkspaceId) return redirect('/create-workspace');
 
-  // if (userWorkspaceId) return redirect(`/workspace/${userWorkspaceId}`);
   
   return (
     <div className="min-h-screen flex items-center justify-center bg-amber-300">
