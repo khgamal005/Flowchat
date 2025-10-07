@@ -2,7 +2,6 @@ import { supabaseServerClient } from '@/supabase/supabaseServer';
 import { NextApiRequest, NextApiResponse } from 'next';
 
 import supabaseServerClientPages from '@/supabase/supabaseSeverPages';
-import { User } from '@/types/app';
 
 export const getUserData = async (): Promise<User | null> => {
   const supabase = await supabaseServerClient();
@@ -12,7 +11,7 @@ export const getUserData = async (): Promise<User | null> => {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    console.log('NO USER', user);
+    console.log('NO USER', use);
     return null;
   }
 

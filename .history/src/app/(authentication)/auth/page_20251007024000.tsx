@@ -42,14 +42,13 @@ const AuthPage = () => {
 
     useEffect(() => {
     const getCurrUser = async () => {
-      const 
-      {
+      const {
         data: { session },
       } = await supabaseBrowserClient.auth.getSession();
-      
-      console.log(session);
+
       if (session) {
         return router.push('/');
+        console.log(data);
       }
     };
 

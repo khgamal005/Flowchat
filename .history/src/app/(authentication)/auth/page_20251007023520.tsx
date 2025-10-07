@@ -40,22 +40,7 @@ const AuthPage = () => {
     },
   });
 
-    useEffect(() => {
-    const getCurrUser = async () => {
-      const 
-      {
-        data: { session },
-      } = await supabaseBrowserClient.auth.getSession();
-      
-      console.log(session);
-      if (session) {
-        return router.push('/');
-      }
-    };
-
-    getCurrUser();
-    setIsMounted(true);
-  }, [router]);
+  
 
     async function onSubmit(values: z.infer<typeof formSchema>) {
       console.log(values)

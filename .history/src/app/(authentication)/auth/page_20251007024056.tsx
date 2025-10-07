@@ -42,8 +42,7 @@ const AuthPage = () => {
 
     useEffect(() => {
     const getCurrUser = async () => {
-      const 
-      {
+      const {
         data: { session },
       } = await supabaseBrowserClient.auth.getSession();
       
