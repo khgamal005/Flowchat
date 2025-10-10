@@ -1,0 +1,49 @@
+import { supabaseServerClient } from "@/supabase/supabaseServer";
+
+export async function getUserData() {
+  const supabase = await supabaseServerClient();
+
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+
+  if (error || !user) return null;
+
+  const { data } = await supabase
+    .from("users")
+    .select("*")
+    .eq("id", user.id)
+    .single();
+
+  return data;
+}
+
+
+// export const getUserDataPages = async (
+//   req: NextApiRequest,
+//   res: NextApiResponse
+// ): Promise<User | null> => {
+//   const supabase = supabaseServerClientPages(req, res);
+
+//   const {
+//     data: { user },
+//   } = await supabase.auth.getUser();
+
+//   if (!user) {
+//     console.log('NO USER', user);
+//     return null;
+//   }
+
+//   const { data, error } = await supabase
+//     .from('users')
+//     .select('*')
+//     .eq('id', user.id);
+
+//   if (error) {
+//     console.log(error);
+//     return null;
+//   }
+
+//   return data ? data[0] : null;
+// };
