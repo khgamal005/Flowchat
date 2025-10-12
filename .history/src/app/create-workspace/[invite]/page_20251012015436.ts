@@ -1,5 +1,4 @@
 import { workspaceInvite } from '@/actions/workspaces';
-import { createClient } from '@/supabase/supabaseServer';
 import { redirect } from 'next/navigation';
 
 const InvitePage = async ({
@@ -9,7 +8,6 @@ const InvitePage = async ({
 }) => {
   await workspaceInvite(inviteCode);
 
-    const supabase = await createClient();
 
   const { data } = await supabase
     .from('workspaces')

@@ -77,7 +77,6 @@ CREATE TRIGGER trigger_add_workspace_to_user
 AFTER INSERT ON public.workspaces
 FOR EACH ROW
 EXECUTE FUNCTION public.add_workspace_to_user();
- 
 
 CREATE CHANNELS
 create table

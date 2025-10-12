@@ -1,9 +1,9 @@
 'use server';
 
 import { getUserData } from '@/actions/get-user-data';
+import { updateUserWorkspace } from '@/actions/update-user-workspace';
 import { createClient } from '@/supabase/supabaseServer';
 import { addMemberToWorkspace } from './add-member-to-workspace';
-import { updateUserWorkspace } from './update-user-workspace';
 
 export const getUserWorkspaceData = async (workspaceIds: Array<string>) => {
     const supabase = await createClient();

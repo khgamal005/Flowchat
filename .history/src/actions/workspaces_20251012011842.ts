@@ -1,12 +1,11 @@
 'use server';
 
 import { getUserData } from '@/actions/get-user-data';
-import { createClient } from '@/supabase/supabaseServer';
-import { addMemberToWorkspace } from './add-member-to-workspace';
-import { updateUserWorkspace } from './update-user-workspace';
+import { addMemberToWorkspace } from '@/actions/add-member-to-workspace';
+import { updateUserWorkspace } from '@/actions/update-user-workspace';
 
 export const getUserWorkspaceData = async (workspaceIds: Array<string>) => {
-    const supabase = await createClient();
+  const supabase = await supabaseServerClient();
 
   const { data, error } = await supabase
     .from('workspaces')
@@ -17,7 +16,6 @@ export const getUserWorkspaceData = async (workspaceIds: Array<string>) => {
 };
 
 export const getCurrentWorksaceData = async (workspaceId: string) => {
-    const supabase = await createClient();
 
   const { data, error } = await supabase
     .from('workspaces')
@@ -57,7 +55,7 @@ export const getCurrentWorksaceData = async (workspaceId: string) => {
 };
 
 export const workspaceInvite = async (inviteCode: string) => {
-    const supabase = await createClient();
+  const supabase = await supabaseServerClient();
   const userData = await getUserData();
 
   const { data, error } = await supabase

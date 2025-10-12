@@ -53,31 +53,7 @@ END;
 $$ language plpgsql;
 
 
--- ✅ Ensure the 'workspaces' column in users table has an empty array by default
-ALTER TABLE public.users
-ALTER COLUMN workspaces SET DEFAULT '{}';
 
--- ✅ Create (or replace) trigger function to automatically add workspace ID
-CREATE OR REPLACE FUNCTION public.add_workspace_to_user()
-RETURNS trigger AS $$
-BEGIN
-  UPDATE public.users
-  SET workspaces = COALESCE(workspaces, '{}') || ARRAY[NEW.id::text]
-  WHERE id = NEW.super_admin;
-
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
--- ✅ Remove any old trigger (to prevent duplication)
-DROP TRIGGER IF EXISTS trigger_add_workspace_to_user ON public.workspaces;
-
--- ✅ Create new trigger
-CREATE TRIGGER trigger_add_workspace_to_user
-AFTER INSERT ON public.workspaces
-FOR EACH ROW
-EXECUTE FUNCTION public.add_workspace_to_user();
- 
 
 CREATE CHANNELS
 create table

@@ -1,7 +1,6 @@
 'use server';
 
-import { createClient } from "@/supabase/supabaseServer";
-
+import { createClient } from "@/supabase/supabaseClient";
 
 
 
