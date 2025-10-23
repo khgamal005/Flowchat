@@ -8,7 +8,7 @@ type UseChatSocketConnectionProps = {
   updateKey: string;
   queryKey: string;
   paramValue: string;
-  enabled?: boolean;
+  enabled?: boolean; // Add this to control when the hook is active
 };
 
 export const useChatSocketConnection = ({
@@ -16,7 +16,7 @@ export const useChatSocketConnection = ({
   updateKey,
   queryKey,
   paramValue,
-  enabled = true,
+  enabled = true, // Default to enabled
 }: UseChatSocketConnectionProps) => {
   const { socket } = useSocket();
   const queryClient = useQueryClient();
@@ -25,12 +25,14 @@ export const useChatSocketConnection = ({
     (message: MessageWithUser) => {
       queryClient.setQueryData([queryKey, paramValue], (prev: any) => {
         if (!prev?.pages?.length) return prev;
+
         const updatedPages = prev.pages.map((page: any) => ({
           ...page,
           data: page.data.map((msg: MessageWithUser) =>
             msg.id === message.id ? message : msg
           ),
         }));
+
         return { ...prev, pages: updatedPages };
       });
     },
@@ -39,19 +41,25 @@ export const useChatSocketConnection = ({
 
   const handleNewMessage = useCallback(
     (message: MessageWithUser) => {
+      // Only add if it's not already in the list (avoid duplicates)
       queryClient.setQueryData([queryKey, paramValue], (prev: any) => {
         if (!prev?.pages?.length) return prev;
 
-        const exists = prev.pages[0].data.some(
+        // Check if message already exists to avoid duplicates
+        const existingMessage = prev.pages[0].data.find(
           (msg: MessageWithUser) => msg.id === message.id
         );
-        if (exists) return prev;
+        
+        if (existingMessage) {
+          return prev; // Message already exists, don't add again
+        }
 
         const updatedPages = [...prev.pages];
         updatedPages[0] = {
           ...updatedPages[0],
           data: [message, ...updatedPages[0].data],
         };
+
         return { ...prev, pages: updatedPages };
       });
     },
@@ -61,11 +69,10 @@ export const useChatSocketConnection = ({
   useEffect(() => {
     if (!socket || !enabled) return;
 
-    console.log('🔌 Socket listeners set:', { addKey, updateKey });
-
     socket.on(updateKey, handleUpdateMessage);
     socket.on(addKey, handleNewMessage);
 
+    // Cleanup
     return () => {
       socket.off(updateKey, handleUpdateMessage);
       socket.off(addKey, handleNewMessage);

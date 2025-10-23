@@ -103,6 +103,7 @@ const ChatGroup: FC<ChatGroupProps> = ({
         <div className="sticky bottom-0 bg-background border-t">
           <TextEditor
             apiUrl={socketUrl}
+            chatId={chatId}
             channel={currentChannelData}
             type={type}
             userData={userData}

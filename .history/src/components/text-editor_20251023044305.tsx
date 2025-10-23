@@ -3,25 +3,24 @@
 import { FiPlus } from 'react-icons/fi';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import PlaceHolder from '@tiptap/extension-placeholder';
 import { FC, useState } from 'react';
+import PlaceHolder from '@tiptap/extension-placeholder';
 import { Send } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query'; // ✅ added
 
 import { Button } from '@/components/ui/button';
 import MenuBar from '@/components/menu-bar';
-import ChatFileUpload from '@/components/chat-file-upload';
+import { Channel, User, Workspace, MessageWithUser } from '@/types/app';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
-  DialogTitle,
 } from '@/components/ui/dialog';
-import { Channel, User, Workspace, MessageWithUser } from '@/types/app';
+import { DialogTitle } from '@radix-ui/react-dialog';
+import ChatFileUpload from '@/components/chat-file-upload';
 import { useSocket } from '@/providers/web-socket';
-import { useChatSocketConnection } from '@/hooks/use-chat-socket-connection';
 
 type TextEditorProps = {
   apiUrl: string;
@@ -47,24 +46,14 @@ const TextEditor: FC<TextEditorProps> = ({
   const [isSending, setIsSending] = useState(false);
   const { socket } = useSocket();
   const router = useRouter();
-  const queryClient = useQueryClient();
+  const queryClient = useQueryClient(); // ✅ define query client
 
+  // ✅ Create a consistent key for React Query caching
   const chatId = type === 'Channel' ? channel?.id : recipientId;
-  const queryKey = type === 'Channel' ? `channel:${chatId}` : `direct_message:${chatId}`;
-
-  // ✅ Subscribe to real-time socket updates too (same key)
-  useChatSocketConnection({
-    queryKey,
-    addKey:
-      type === 'Channel'
-        ? `${queryKey}:channel-messages`
-        : `direct_messages:post`,
-    updateKey:
-      type === 'Channel'
-        ? `${queryKey}:channel-messages:update`
-        : `direct_messages:update`,
-    paramValue: chatId!,
-  });
+  const queryKey =
+    type === 'Channel'
+      ? `channel:${chatId}`
+      : `direct_message:${chatId}`;
 
   const toggleFileUploadModal = () => setFileUploadModal(prev => !prev);
 
@@ -116,8 +105,8 @@ const TextEditor: FC<TextEditorProps> = ({
       const result = await response.json();
       const newMessage = result.data;
 
-      // ✅ Optimistic UI update (same key signature)
-      queryClient.setQueryData([queryKey, chatId], (prev: any) => {
+      // ✅ Optimistically add message to React Query cache
+      queryClient.setQueryData([queryKey], (prev: any) => {
         if (!prev?.pages?.length) return prev;
         const updatedPages = [...prev.pages];
         updatedPages[0] = {
@@ -161,7 +150,9 @@ const TextEditor: FC<TextEditorProps> = ({
 
   return (
     <div className='p-1 border dark:border-zinc-500 border-neutral-700 rounded-md relative overflow-hidden'>
-      <div className='sticky top-0 z-10'>{editor && <MenuBar editor={editor} />}</div>
+      <div className='sticky top-0 z-10'>
+        {editor && <MenuBar editor={editor} />}
+      </div>
 
       <div className='h-[150px] pt-11 flex w-full grow-1'>
         <EditorContent
@@ -171,11 +162,12 @@ const TextEditor: FC<TextEditorProps> = ({
         />
       </div>
 
-      <div
-        className='absolute top-3 z-10 right-3 bg-black dark:bg-white cursor-pointer transition-all duration-500 hover:scale-110 text-white grid place-content-center rounded-full w-6 h-6'
-        onClick={toggleFileUploadModal}
-      >
-        <FiPlus size={28} className='dark:text-black' />
+      <div className='absolute top-3 z-10 right-3 bg-black dark:bg-white cursor-pointer transition-all duration-500 hover:scale-110 text-white grid place-content-center rounded-full w-6 h-6'>
+        <FiPlus
+          onClick={toggleFileUploadModal}
+          size={28}
+          className='dark:text-black'
+        />
       </div>
 
       <Button

@@ -3,25 +3,24 @@
 import { FiPlus } from 'react-icons/fi';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import PlaceHolder from '@tiptap/extension-placeholder';
 import { FC, useState } from 'react';
+import PlaceHolder from '@tiptap/extension-placeholder';
 import { Send } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useQueryClient } from '@tanstack/react-query';
 
 import { Button } from '@/components/ui/button';
 import MenuBar from '@/components/menu-bar';
-import ChatFileUpload from '@/components/chat-file-upload';
+import { Channel, User, Workspace, MessageWithUser } from '@/types/app';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
-  DialogTitle,
 } from '@/components/ui/dialog';
-import { Channel, User, Workspace, MessageWithUser } from '@/types/app';
-import { useSocket } from '@/providers/web-socket';
-import { useChatSocketConnection } from '@/hooks/use-chat-socket-connection';
+import { DialogTitle } from '@radix-ui/react-dialog';
+import ChatFileUpload from '@/components/chat-file-upload';
+import { createClient } from '@/supabase/supabaseClient';
+import { useSocket } from '@/providers/web-socket'; // Use shared socket
 
 type TextEditorProps = {
   apiUrl: string;
@@ -45,28 +44,10 @@ const TextEditor: FC<TextEditorProps> = ({
   const [content, setContent] = useState('');
   const [fileUploadModal, setFileUploadModal] = useState(false);
   const [isSending, setIsSending] = useState(false);
-  const { socket } = useSocket();
+  const { socket } = useSocket(); // Use shared socket from provider
   const router = useRouter();
-  const queryClient = useQueryClient();
 
-  const chatId = type === 'Channel' ? channel?.id : recipientId;
-  const queryKey = type === 'Channel' ? `channel:${chatId}` : `direct_message:${chatId}`;
-
-  // ✅ Subscribe to real-time socket updates too (same key)
-  useChatSocketConnection({
-    queryKey,
-    addKey:
-      type === 'Channel'
-        ? `${queryKey}:channel-messages`
-        : `direct_messages:post`,
-    updateKey:
-      type === 'Channel'
-        ? `${queryKey}:channel-messages:update`
-        : `direct_messages:update`,
-    paramValue: chatId!,
-  });
-
-  const toggleFileUploadModal = () => setFileUploadModal(prev => !prev);
+  const toggleFileUploadModal = () => setFileUploadModal(prevState => !prevState);
 
   const editor = useEditor({
     extensions: [
@@ -85,9 +66,18 @@ const TextEditor: FC<TextEditorProps> = ({
 
   const handleSend = async () => {
     if (content.trim().length < 1 || isSending) return;
-    setIsSending(true);
 
+    setIsSending(true);
+    
     try {
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        router.refresh();
+        throw new Error('No active session');
+      }
+
       const payload = { content, type };
       let endpoint = apiUrl;
 
@@ -99,13 +89,15 @@ const TextEditor: FC<TextEditorProps> = ({
 
       const response = await fetch(endpoint, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify(payload),
         credentials: 'include',
       });
 
       if (response.status === 401) {
-        router.push('/auth');
+        router.push('/login');
         return;
       }
 
@@ -114,37 +106,26 @@ const TextEditor: FC<TextEditorProps> = ({
       }
 
       const result = await response.json();
-      const newMessage = result.data;
-
-      // ✅ Optimistic UI update (same key signature)
-      queryClient.setQueryData([queryKey, chatId], (prev: any) => {
-        if (!prev?.pages?.length) return prev;
-        const updatedPages = [...prev.pages];
-        updatedPages[0] = {
-          ...updatedPages[0],
-          data: [newMessage, ...updatedPages[0].data],
-        };
-        return { ...prev, pages: updatedPages };
-      });
-
-      // ✅ Clear editor
+      
+      // Clear editor on success
       setContent('');
       editor?.commands.setContent('');
-
-      // ✅ Emit socket event
-      const addKey =
-        type === 'Channel'
-          ? `${queryKey}:channel-messages`
+      
+      // Emit socket event for real-time update
+      if (socket && result.data) {
+        const eventName = type === 'Channel' 
+          ? `channel:${channel?.id}:channel-messages` 
           : `direct_messages:post`;
-
-      if (socket && newMessage) {
-        socket.emit(addKey, newMessage);
+        
+        console.log('Emitting socket event:', eventName, result.data);
+        socket.emit(eventName, result.data);
       }
 
-      // ✅ Callback
-      if (onMessageSent) {
-        onMessageSent(newMessage);
+      // Call parent callback to update UI immediately
+      if (onMessageSent && result.data) {
+        onMessageSent(result.data);
       }
+
     } catch (error) {
       console.error('SEND MESSAGE ERROR:', error);
     } finally {
@@ -161,21 +142,22 @@ const TextEditor: FC<TextEditorProps> = ({
 
   return (
     <div className='p-1 border dark:border-zinc-500 border-neutral-700 rounded-md relative overflow-hidden'>
-      <div className='sticky top-0 z-10'>{editor && <MenuBar editor={editor} />}</div>
-
+      <div className='sticky top-0 z-10'>
+        {editor && <MenuBar editor={editor} />}
+      </div>
       <div className='h-[150px] pt-11 flex w-full grow-1'>
         <EditorContent
-          className='prose w-full h-[150px] dark:text-white leading-normal overflow-y-auto whitespace-pre-wrap'
+          className="prose w-full h-[150px] dark:text-white leading-normal overflow-y-auto whitespace-pre-wrap"
           editor={editor}
           onKeyDown={handleKeyDown}
         />
       </div>
-
-      <div
-        className='absolute top-3 z-10 right-3 bg-black dark:bg-white cursor-pointer transition-all duration-500 hover:scale-110 text-white grid place-content-center rounded-full w-6 h-6'
-        onClick={toggleFileUploadModal}
-      >
-        <FiPlus size={28} className='dark:text-black' />
+      <div className='absolute top-3 z-10 right-3 bg-black dark:bg-white cursor-pointer transition-all duration-500 hover:scale-110 text-white grid place-content-center rounded-full w-6 h-6'>
+        <FiPlus
+          onClick={toggleFileUploadModal}
+          size={28}
+          className='dark:text-black'
+        />
       </div>
 
       <Button

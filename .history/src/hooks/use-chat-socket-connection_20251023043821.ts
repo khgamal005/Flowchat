@@ -25,12 +25,14 @@ export const useChatSocketConnection = ({
     (message: MessageWithUser) => {
       queryClient.setQueryData([queryKey, paramValue], (prev: any) => {
         if (!prev?.pages?.length) return prev;
+
         const updatedPages = prev.pages.map((page: any) => ({
           ...page,
           data: page.data.map((msg: MessageWithUser) =>
             msg.id === message.id ? message : msg
           ),
         }));
+
         return { ...prev, pages: updatedPages };
       });
     },
@@ -42,7 +44,8 @@ export const useChatSocketConnection = ({
       queryClient.setQueryData([queryKey, paramValue], (prev: any) => {
         if (!prev?.pages?.length) return prev;
 
-        const exists = prev.pages[0].data.some(
+        // avoid duplicates
+        const exists = prev.pages[0].data.find(
           (msg: MessageWithUser) => msg.id === message.id
         );
         if (exists) return prev;
@@ -52,6 +55,7 @@ export const useChatSocketConnection = ({
           ...updatedPages[0],
           data: [message, ...updatedPages[0].data],
         };
+
         return { ...prev, pages: updatedPages };
       });
     },
@@ -61,7 +65,7 @@ export const useChatSocketConnection = ({
   useEffect(() => {
     if (!socket || !enabled) return;
 
-    console.log('🔌 Socket listeners set:', { addKey, updateKey });
+    console.log('🔌 Setting up socket listeners:', { addKey, updateKey, paramValue });
 
     socket.on(updateKey, handleUpdateMessage);
     socket.on(addKey, handleNewMessage);

@@ -56,6 +56,7 @@ const ChatGroup: FC<ChatGroupProps> = ({
   // Handle new message from TextEditor
   const handleNewMessage = (message: MessageWithUser) => {
     // This callback will be used by ChatMessages to update the UI instantly
+    console.log('New message sent:', message);
   };
 
   return (
@@ -86,7 +87,7 @@ const ChatGroup: FC<ChatGroupProps> = ({
         <div className="flex-1 overflow-hidden">
           <ChatMessages
             userData={userData}
-            name={currentChannelData?.name ?? "USERNAME"}
+            name={currentChannelData?.name ?? 'USERNAME'}
             workspaceData={currentWorkspaceData}
             chatId={chatId}
             type={type}
@@ -103,6 +104,8 @@ const ChatGroup: FC<ChatGroupProps> = ({
         <div className="sticky bottom-0 bg-background border-t">
           <TextEditor
             apiUrl={socketUrl}
+                        chatId={chatId}
+
             channel={currentChannelData}
             type={type}
             userData={userData}

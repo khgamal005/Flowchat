@@ -3,25 +3,24 @@
 import { FiPlus } from 'react-icons/fi';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
+import { FC, useState, useEffect } from 'react'; // Added useEffect import
 import PlaceHolder from '@tiptap/extension-placeholder';
-import { FC, useState } from 'react';
 import { Send } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useQueryClient } from '@tanstack/react-query';
+import { io, Socket } from 'socket.io-client';
 
 import { Button } from '@/components/ui/button';
 import MenuBar from '@/components/menu-bar';
-import ChatFileUpload from '@/components/chat-file-upload';
+import { Channel, User, Workspace, MessageWithUser } from '@/types/app';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
-  DialogTitle,
 } from '@/components/ui/dialog';
-import { Channel, User, Workspace, MessageWithUser } from '@/types/app';
-import { useSocket } from '@/providers/web-socket';
-import { useChatSocketConnection } from '@/hooks/use-chat-socket-connection';
+import { DialogTitle } from '@radix-ui/react-dialog';
+import ChatFileUpload from '@/components/chat-file-upload';
+import { createClient } from '@/supabase/supabaseClient';
 
 type TextEditorProps = {
   apiUrl: string;
@@ -30,7 +29,7 @@ type TextEditorProps = {
   workspaceData: Workspace;
   userData: User;
   recipientId?: string;
-  onMessageSent?: (message: MessageWithUser) => void;
+  onMessageSent?: (message: MessageWithUser) => void; // Add this prop
 };
 
 const TextEditor: FC<TextEditorProps> = ({
@@ -40,33 +39,28 @@ const TextEditor: FC<TextEditorProps> = ({
   workspaceData,
   userData,
   recipientId,
-  onMessageSent,
+  onMessageSent, // Receive callback from parent
 }) => {
   const [content, setContent] = useState('');
   const [fileUploadModal, setFileUploadModal] = useState(false);
   const [isSending, setIsSending] = useState(false);
-  const { socket } = useSocket();
+  const [socket, setSocket] = useState<Socket | null>(null);
   const router = useRouter();
-  const queryClient = useQueryClient();
 
-  const chatId = type === 'Channel' ? channel?.id : recipientId;
-  const queryKey = type === 'Channel' ? `channel:${chatId}` : `direct_message:${chatId}`;
+  // Initialize socket connection
+  useEffect(() => {
+    const newSocket = io({
+      path: '/api/web-socket/io',
+    });
 
-  // ✅ Subscribe to real-time socket updates too (same key)
-  useChatSocketConnection({
-    queryKey,
-    addKey:
-      type === 'Channel'
-        ? `${queryKey}:channel-messages`
-        : `direct_messages:post`,
-    updateKey:
-      type === 'Channel'
-        ? `${queryKey}:channel-messages:update`
-        : `direct_messages:update`,
-    paramValue: chatId!,
-  });
+    setSocket(newSocket);
 
-  const toggleFileUploadModal = () => setFileUploadModal(prev => !prev);
+    return () => {
+      newSocket.disconnect();
+    };
+  }, []);
+
+  const toggleFileUploadModal = () => setFileUploadModal(prevState => !prevState);
 
   const editor = useEditor({
     extensions: [
@@ -85,9 +79,19 @@ const TextEditor: FC<TextEditorProps> = ({
 
   const handleSend = async () => {
     if (content.trim().length < 1 || isSending) return;
-    setIsSending(true);
 
+    setIsSending(true);
+    
     try {
+      // Verify session before sending
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        router.refresh();
+        throw new Error('No active session');
+      }
+
       const payload = { content, type };
       let endpoint = apiUrl;
 
@@ -99,13 +103,15 @@ const TextEditor: FC<TextEditorProps> = ({
 
       const response = await fetch(endpoint, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify(payload),
         credentials: 'include',
       });
 
       if (response.status === 401) {
-        router.push('/auth');
+        router.push('/login');
         return;
       }
 
@@ -114,37 +120,25 @@ const TextEditor: FC<TextEditorProps> = ({
       }
 
       const result = await response.json();
-      const newMessage = result.data;
-
-      // ✅ Optimistic UI update (same key signature)
-      queryClient.setQueryData([queryKey, chatId], (prev: any) => {
-        if (!prev?.pages?.length) return prev;
-        const updatedPages = [...prev.pages];
-        updatedPages[0] = {
-          ...updatedPages[0],
-          data: [newMessage, ...updatedPages[0].data],
-        };
-        return { ...prev, pages: updatedPages };
-      });
-
-      // ✅ Clear editor
+      
+      // Clear editor on success
       setContent('');
       editor?.commands.setContent('');
-
-      // ✅ Emit socket event
-      const addKey =
-        type === 'Channel'
-          ? `${queryKey}:channel-messages`
-          : `direct_messages:post`;
-
-      if (socket && newMessage) {
-        socket.emit(addKey, newMessage);
+      
+      // Emit socket event for real-time update
+      if (socket && type === 'Channel' && channel) {
+        socket.emit('message', {
+          type: 'new_message',
+          channelId: channel.id,
+          message: result.data
+        });
       }
 
-      // ✅ Callback
-      if (onMessageSent) {
-        onMessageSent(newMessage);
+      // Call parent callback to update UI immediately
+      if (onMessageSent && result.data) {
+        onMessageSent(result.data);
       }
+
     } catch (error) {
       console.error('SEND MESSAGE ERROR:', error);
     } finally {
@@ -161,21 +155,22 @@ const TextEditor: FC<TextEditorProps> = ({
 
   return (
     <div className='p-1 border dark:border-zinc-500 border-neutral-700 rounded-md relative overflow-hidden'>
-      <div className='sticky top-0 z-10'>{editor && <MenuBar editor={editor} />}</div>
-
+      <div className='sticky top-0 z-10'>
+        {editor && <MenuBar editor={editor} />}
+      </div>
       <div className='h-[150px] pt-11 flex w-full grow-1'>
         <EditorContent
-          className='prose w-full h-[150px] dark:text-white leading-normal overflow-y-auto whitespace-pre-wrap'
+          className="prose w-full h-[150px] dark:text-white leading-normal overflow-y-auto whitespace-pre-wrap"
           editor={editor}
           onKeyDown={handleKeyDown}
         />
       </div>
-
-      <div
-        className='absolute top-3 z-10 right-3 bg-black dark:bg-white cursor-pointer transition-all duration-500 hover:scale-110 text-white grid place-content-center rounded-full w-6 h-6'
-        onClick={toggleFileUploadModal}
-      >
-        <FiPlus size={28} className='dark:text-black' />
+      <div className='absolute top-3 z-10 right-3 bg-black dark:bg-white cursor-pointer transition-all duration-500 hover:scale-110 text-white grid place-content-center rounded-full w-6 h-6'>
+        <FiPlus
+          onClick={toggleFileUploadModal}
+          size={28}
+          className='dark:text-black'
+        />
       </div>
 
       <Button
