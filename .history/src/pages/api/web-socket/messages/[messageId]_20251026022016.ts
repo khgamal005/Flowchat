@@ -77,7 +77,7 @@ export default async function handler(
     }
 
     // ---------------------------------------------------
-    //  EDIT MESSAGE (PATCH)
+    // ✏️ EDIT MESSAGE (PATCH)
     // ---------------------------------------------------
     if (req.method === "PATCH") {
       const { content } = req.body;

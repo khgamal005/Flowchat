@@ -63,12 +63,12 @@ export default async function handler(
 
       // ✅ Emit deletion event to clients
       if (io) {
-        const deleteKey = channelId
-          ? "channel:message:delete"
-          : "direct:message:delete";
-
-        io.emit(deleteKey, { messageId, channelId, workspaceId });
-        console.log("🟠 Emitted", deleteKey);
+        io.emit(`message:deleted:${channelId}`, {
+          messageId,
+          channelId,
+          workspaceId,
+        });
+        console.log("🟠 Emitted message:deleted event");
       } else {
         console.warn("⚠️ io not found on global");
       }
@@ -77,7 +77,7 @@ export default async function handler(
     }
 
     // ---------------------------------------------------
-    //  EDIT MESSAGE (PATCH)
+    // ✏️ EDIT MESSAGE
     // ---------------------------------------------------
     if (req.method === "PATCH") {
       const { content } = req.body;
@@ -90,7 +90,7 @@ export default async function handler(
           updated_at: new Date().toISOString(),
         })
         .eq("id", messageId)
-        .select("*, users(*)")
+        .select("*, user(*)")
         .single();
 
       if (updateError) {
@@ -98,22 +98,19 @@ export default async function handler(
         return res.status(500).json({ error: updateError.message });
       }
 
-      // ✅ Emit update event (MATCH HOOK KEY)
-      if (io) {
-        const updateKey = channelId
-          ? "channel:message:update"
-          : "direct:message:update";
+      // ✅ Emit update event
+     if (io) {
+  const updateKey = channelId
+    ? `channel:message:update:${channelId}`
+    : `direct:message:update:${workspaceId}`;
 
-        io.emit(updateKey, updatedMessage);
-        console.log("🟢 Emitted", updateKey);
-      } else {
-        console.warn("⚠️ io not found on global");
-      }
-
-      return res.status(200).json(updatedMessage);
-    }
-
+  io.emit(updateKey, updatedMessage);
+  console.log("🟢 Emitted", updateKey);
+} else {
+  console.warn("⚠️ io not found on global");
+}
     // ---------------------------------------------------
+    // ❌ UNSUPPORTED METHODS
     // ---------------------------------------------------
     return res.status(405).json({ error: "Method not allowed" });
   } catch (err: any) {

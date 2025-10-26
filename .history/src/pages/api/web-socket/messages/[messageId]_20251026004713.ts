@@ -77,7 +77,7 @@ export default async function handler(
     }
 
     // ---------------------------------------------------
-    //  EDIT MESSAGE (PATCH)
+    // ✏️ EDIT MESSAGE (PATCH)
     // ---------------------------------------------------
     if (req.method === "PATCH") {
       const { content } = req.body;
@@ -90,7 +90,7 @@ export default async function handler(
           updated_at: new Date().toISOString(),
         })
         .eq("id", messageId)
-        .select("*, users(*)")
+        .select("*, user(*)")
         .single();
 
       if (updateError) {
@@ -114,6 +114,7 @@ export default async function handler(
     }
 
     // ---------------------------------------------------
+    // ❌ UNSUPPORTED METHODS
     // ---------------------------------------------------
     return res.status(405).json({ error: "Method not allowed" });
   } catch (err: any) {

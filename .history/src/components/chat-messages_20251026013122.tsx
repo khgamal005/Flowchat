@@ -85,7 +85,7 @@ useChatSocketConnection({
 return (
   <div
     ref={chatRef}
-  className="flex-1 flex flex-col py-4 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-500 scrollbar-track-transparent hover:scrollbar-thumb-gray-400"
+    className="flex-1 flex flex-col py-4 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-500 scrollbar-track-transparent hover:scrollbar-thumb-gray-400"
   >
     {!hasNextPage && (
       <IntroBanner

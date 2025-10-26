@@ -95,12 +95,11 @@ const ChatItem: FC<ChatItemProps> = ({
 const onSubmit = async ({ content }: z.infer<typeof formSchema>) => {
   try {
     const url = `${socketUrl}/${id}?${new URLSearchParams(socketQuery)}`;
-    await axios.patch(url, { content }); // Server emits socket event automatically
-
+    await axios.patch(url, { content }); // server emits automatically
     setIsEditing(false);
     form.reset();
   } catch (err) {
-    console.error("❌ Failed to edit message:", err);
+    console.error('❌ Failed to edit message:', err);
   }
 };
 

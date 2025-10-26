@@ -132,9 +132,9 @@ const SearchBar: FC<SearchBarProps> = ({
                         className='text-[10px]'
                         size='sm'
                         disabled={isChannelMember(member.id)}
-                        onClick={() =>
-                          addUserToChannel(member.id, currentChannelData?.id!)
-                        }
+                        // onClick={() =>
+                        //   addUserToChannel(member.id, currentChannelData?.id!)
+                        // }
                       >
                         Add to Channel
                       </Button>

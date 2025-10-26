@@ -101,7 +101,6 @@ const ChatGroup: FC<ChatGroupProps> = ({
         </div>
 
       </div>
-    </div>
       <div className="m-4">
           <TextEditor
             apiUrl={socketUrl}
@@ -113,6 +112,7 @@ const ChatGroup: FC<ChatGroupProps> = ({
             onMessageSent={handleNewMessage} // Pass callback for real-time updates
           />
         </div>
+    </div>
         </>
 
   );

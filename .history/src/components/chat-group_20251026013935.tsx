@@ -59,7 +59,6 @@ const ChatGroup: FC<ChatGroupProps> = ({
   };
 
   return (
-    <>
       <div className="h-[calc(100vh-256px)] overflow-y-auto [&::-webkit-scrollbar-thumb]:rounded-[6px] [&::-webkit-scrollbar-thumb]:bg-foreground/60 [&::-webkit-scrollbar-track]:bg-none [&::-webkit-scrollbar]:w-2">
       <Sidebar
         currentWorkspaceData={currentWorkspaceData}
@@ -84,7 +83,7 @@ const ChatGroup: FC<ChatGroupProps> = ({
         <div className="p-4 relative w-full overflow-hidden">
         <ChatHeader title={headerTitle} chatId={chatId} userData={userData} />
 
-          <div className="mt-10">
+        <div className="flex-1 overflow-hidden">
           <ChatMessages
             userData={userData}
             name={currentChannelData?.name ?? "USERNAME"}
@@ -100,9 +99,7 @@ const ChatGroup: FC<ChatGroupProps> = ({
           />
         </div>
 
-      </div>
-    </div>
-      <div className="m-4">
+        <div className="sticky bottom-0 bg-background border-t">
           <TextEditor
             apiUrl={socketUrl}
             channel={currentChannelData}
@@ -113,8 +110,8 @@ const ChatGroup: FC<ChatGroupProps> = ({
             onMessageSent={handleNewMessage} // Pass callback for real-time updates
           />
         </div>
-        </>
-
+      </div>
+    </div>
   );
 };
 

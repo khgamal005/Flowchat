@@ -85,7 +85,23 @@ useChatSocketConnection({
 return (
   <div
     ref={chatRef}
-  className="flex-1 flex flex-col py-4 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-500 scrollbar-track-transparent hover:scrollbar-thumb-gray-400"
+/* For WebKit browsers */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: #6b7280; /* gray-500 */
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: #9ca3af; /* gray-400 */
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
   >
     {!hasNextPage && (
       <IntroBanner
