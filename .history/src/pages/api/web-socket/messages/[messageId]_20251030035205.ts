@@ -8,7 +8,7 @@ export default async function handler(
   res: SockerIoApiResponse
 ) {
   try {
-    const { messageId, workspaceId } = req.query;
+    const { messageId, channelId, workspaceId } = req.query;
 
     if (!messageId || typeof messageId !== "string") {
       return res.status(400).json({ error: "Invalid message ID" });
@@ -18,7 +18,7 @@ export default async function handler(
     if (!user) return res.status(401).json({ error: "Unauthorized" });
 
     const supabase = supabaseServerClientPages(req, res);
-    const io = global._io; // ✅ same as your channel route
+    const io = (global as any)._io; // ✅ Access global Socket.IO
 
     // ---------------------------------------------------
     // 🗑️ DELETE MESSAGE
@@ -26,7 +26,7 @@ export default async function handler(
     if (req.method === "DELETE") {
       const { data: message, error: fetchError } = await supabase
         .from("direct_messages")
-        .select("id, user_one, user_two")
+        .select("*")
         .eq("id", messageId)
         .single();
 
@@ -39,10 +39,8 @@ export default async function handler(
         return res.status(404).json({ error: "Message not found" });
       }
 
-      const isOwner =
-        user.id === message.user_one || user.id === message.user_two;
-
-      if (!isOwner) {
+      // Allow only sender to delete
+      if (message.user_one !== user.id && message.user_two !== user.id) {
         return res
           .status(403)
           .json({ error: "You cannot delete this message" });
@@ -53,11 +51,10 @@ export default async function handler(
         .update({
           is_deleted: true,
           content: "[deleted]",
-          file_url: null,
           updated_at: new Date().toISOString(),
         })
         .eq("id", messageId)
-        .select("*, user_one:users!direct_messages_user_one_fkey(*), user_two:users!direct_messages_user_two_fkey(*)")
+        .select()
         .single();
 
       if (deleteError) {
@@ -65,7 +62,7 @@ export default async function handler(
         return res.status(500).json({ error: deleteError.message });
       }
 
-      // ✅ Emit deletion event (same pattern as channel route)
+      // ✅ Emit deletion event
       if (io) {
         io.emit("direct:message:delete", { messageId, workspaceId });
         console.log("🟠 Emitted direct:message:delete");
@@ -77,29 +74,11 @@ export default async function handler(
     }
 
     // ---------------------------------------------------
-    // ✏️ UPDATE MESSAGE
+    // ✏️ EDIT MESSAGE (PATCH)
     // ---------------------------------------------------
     if (req.method === "PATCH") {
       const { content } = req.body;
       if (!content) return res.status(400).json({ error: "Content required" });
-
-      // Check message ownership first
-      const { data: message, error: fetchError } = await supabase
-        .from("direct_messages")
-        .select("id, user_one, user_two")
-        .eq("id", messageId)
-        .single();
-
-      if (fetchError || !message) {
-        return res.status(404).json({ error: "Message not found" });
-      }
-
-      const isOwner =
-        user.id === message.user_one || user.id === message.user_two;
-
-      if (!isOwner) {
-        return res.status(403).json({ error: "You cannot edit this message" });
-      }
 
       const { data: updatedMessage, error: updateError } = await supabase
         .from("direct_messages")
@@ -108,31 +87,6 @@ export default async function handler(
           updated_at: new Date().toISOString(),
         })
         .eq("id", messageId)
-        .select("*, user_one:users!direct_messages_user_one_fkey(*), user_two:users!direct_messages_user_two_fkey(*)")
-        .single();
-
-      if (updateError) {
-        console.error("❌ Update Error:", updateError);
-        return res.status(500).json({ error: updateError.message });
-      }
-
-      // ✅ Emit update event (same key as in channel router)
-      if (io) {
-        io.emit("direct:message:update", updatedMessage);
-        console.log("🟢 Emitted direct:message:update");
-      } else {
-        console.warn("⚠️ io not found on global");
-      }
-
-      return res.status(200).json(updatedMessage);
-    }
-
-    // ---------------------------------------------------
-    return res.status(405).json({ error: "Method not allowed" });
-  } catch (err: any) {
-    console.error("🔥 API Error:", err);
-    return res
-      .status(500)
-      .json({ error: err.message || "Internal server error" });
-  }
-}
+        .select(
+          "*, user_one:users!direct_messages_user_one_fkey(*), user_two:users!direct_messages_user_two_fkey(*)"
+        )

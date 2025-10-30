@@ -18,14 +18,14 @@ export default async function handler(
     if (!user) return res.status(401).json({ error: "Unauthorized" });
 
     const supabase = supabaseServerClientPages(req, res);
-    const io = (global as any)._io; // ✅ Access global Socket.IO
+    const io = global._io; // ✅ access the global Socket.IO instance
 
     // ---------------------------------------------------
     // 🗑️ DELETE MESSAGE
     // ---------------------------------------------------
     if (req.method === "DELETE") {
       const { data: message, error: fetchError } = await supabase
-        .from("direct_messages")
+        .from("messages")
         .select("*")
         .eq("id", messageId)
         .single();
@@ -39,15 +39,14 @@ export default async function handler(
         return res.status(404).json({ error: "Message not found" });
       }
 
-      // Allow only sender to delete
-      if (message.user_one !== user.id && message.user_two !== user.id) {
+      if (message.user_id !== user.id) {
         return res
           .status(403)
           .json({ error: "You cannot delete this message" });
       }
 
       const { data: deletedMsg, error: deleteError } = await supabase
-        .from("direct_messages")
+        .from("messages")
         .update({
           is_deleted: true,
           content: "[deleted]",
@@ -62,10 +61,14 @@ export default async function handler(
         return res.status(500).json({ error: deleteError.message });
       }
 
-      // ✅ Emit deletion event
+      // ✅ Emit deletion event to clients
       if (io) {
-        io.emit("direct:message:delete", { messageId, workspaceId });
-        console.log("🟠 Emitted direct:message:delete");
+        const deleteKey = channelId
+          ? "channel:message:delete"
+          : "direct:message:delete";
+
+        io.emit(deleteKey, { messageId, channelId, workspaceId });
+        console.log("🟠 Emitted", deleteKey);
       } else {
         console.warn("⚠️ io not found on global");
       }
@@ -74,48 +77,50 @@ export default async function handler(
     }
 
     // ---------------------------------------------------
-    // ✏️ EDIT MESSAGE (PATCH)
+    //  EDIT MESSAGE (PATCH)
     // ---------------------------------------------------
-    if (req.method === "PATCH") {
-      const { content } = req.body;
-      if (!content) return res.status(400).json({ error: "Content required" });
+ try {
+    const user = await getUserDataPages(req, res);
+    if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
-      const { data: updatedMessage, error: updateError } = await supabase
-        .from("direct_messages")
-        .update({
-          content,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", messageId)
-        .select(
-          "*, user_one:users!direct_messages_user_one_fkey(*), user_two:users!direct_messages_user_two_fkey(*)"
-        )
-        .single();
+    const { messageId } = req.query;
+    const { content } = req.body;
 
-      if (updateError) {
-        console.error("❌ Update Error:", updateError);
-        return res.status(500).json({ error: updateError.message });
-      }
+    if (!messageId) return res.status(400).json({ error: 'Missing messageId' });
+    if (!content) return res.status(400).json({ error: 'Content required' });
 
-      // ✅ Emit update event
-      if (io) {
-        io.emit("direct:message:update", updatedMessage);
-        console.log("🟢 Emitted direct:message:update");
-      } else {
-        console.warn("⚠️ io not found on global");
-      }
+    const supabase = supabaseServerClientPages(req, res);
 
-      return res.status(200).json(updatedMessage);
+    // 🔹 Update message
+    const { data: updatedMessage, error: updateError } = await supabase
+      .from('direct_messages')
+      .update({
+        content,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', messageId)
+      .select('*, user_one:users!direct_messages_user_one_fkey(*), user_two:users!direct_messages_user_two_fkey(*)')
+      .single();
+
+    if (updateError) {
+      console.error('❌ Update Error:', updateError);
+      return res.status(500).json({ error: updateError.message });
     }
 
-    // ---------------------------------------------------
-    // ❌ Unsupported method
-    // ---------------------------------------------------
-    return res.status(405).json({ error: "Method not allowed" });
+    // ✅ Emit update event
+    const io = (global as any)._io;
+    if (io) {
+      io.emit('direct:message:update', updatedMessage);
+      console.log('🟢 Emitted direct:message:update');
+    } else {
+      console.warn('⚠️ io not found on global');
+    }
+
+    return res.status(200).json(updatedMessage);
   } catch (err: any) {
-    console.error("🔥 API Error:", err);
+    console.error('🔥 API Error:', err);
     return res
       .status(500)
-      .json({ error: err.message || "Internal server error" });
+      .json({ error: err.message || 'Internal server error' });
   }
 }

@@ -1,5 +1,6 @@
 import { SockerIoApiResponse } from '@/types/app';
 import { NextApiRequest } from 'next';
+
 import { getUserDataPages } from '@/actions/get-user-data';
 import { supabaseServerClientPages } from '@/supabase/supabaseSeverPages';
 
@@ -25,9 +26,10 @@ export default async function handler(
     }
 
     const { content, fileUrl } = req.body;
+
     const supabase = supabaseServerClientPages(req, res);
 
-    const { data: newMessage, error: sendingMessageError } = await supabase
+    const { data, error: sendingMessageError } = await supabase
       .from('direct_messages')
       .insert({
         content,
@@ -45,16 +47,8 @@ export default async function handler(
       return res.status(500).json({ error: 'Error sending message' });
     }
 
-    // ✅ Emit the event through Socket.IO
-    const io = (global as any)._io;
-    if (io) {
-      io.emit('direct:message:new', newMessage);
-      console.log('📤 Emitted direct:message:new', newMessage);
-    } else {
-      console.warn('⚠️ No Socket.IO instance found');
-    }
 
-    return res.status(200).json({ message: 'Message sent', newMessage });
+    return res.status(200).json({ message: 'Message sent' });
   } catch (error) {
     console.log('DIRECT MESSAGE ERROR: ', error);
     return res.status(500).json({ error: 'Error sending message' });

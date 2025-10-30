@@ -45,6 +45,6 @@ app.prepare().then(() => {
 
   server.listen(port, () => {
     console.log(`✅ Server ready at http://${hostname}:${port}`);
-    console.log(`🌐 Socket path: http://${hostname}:${port}/api/web-socket/io`);
+    
   });
 });

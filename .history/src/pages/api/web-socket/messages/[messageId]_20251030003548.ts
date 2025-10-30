@@ -1,6 +1,7 @@
 import { NextApiRequest } from "next";
 import { SockerIoApiResponse } from "@/types/app";
 import { getUserDataPages } from "@/actions/get-user-data";
+import { SupabaseClient } from "@supabase/supabase-js";
 import { supabaseServerClientPages } from "@/supabase/supabaseSeverPages";
 
 export default async function handler(

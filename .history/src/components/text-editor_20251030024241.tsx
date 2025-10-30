@@ -1,5 +1,6 @@
 import { SockerIoApiResponse } from '@/types/app';
 import { NextApiRequest } from 'next';
+
 import { getUserDataPages } from '@/actions/get-user-data';
 import { supabaseServerClientPages } from '@/supabase/supabaseSeverPages';
 
@@ -18,13 +19,14 @@ export default async function handler(
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const { recipientId } = req.query;
+    const { recipientId, type } = req.query;
 
-    if (!recipientId) {
+    if (!recipientId || !type) {
       return res.status(400).json({ error: 'Invalid request' });
     }
 
     const { content, fileUrl } = req.body;
+
     const supabase = supabaseServerClientPages(req, res);
 
     const { data: newMessage, error: sendingMessageError } = await supabase
@@ -45,16 +47,18 @@ export default async function handler(
       return res.status(500).json({ error: 'Error sending message' });
     }
 
-    // ✅ Emit the event through Socket.IO
-    const io = (global as any)._io;
-    if (io) {
-      io.emit('direct:message:new', newMessage);
-      console.log('📤 Emitted direct:message:new', newMessage);
-    } else {
-      console.warn('⚠️ No Socket.IO instance found');
+    // ✅ Emit socket event dynamically (if socket.io server is available)
+    const addKey =
+      type === 'Channel'
+        ? 'channel:message:new'
+        : 'direct:message:new';
+
+    if (global._io && newMessage) {
+      global._io.emit(addKey, newMessage);
+      console.log(`📤 Emitted ${addKey}`, newMessage);
     }
 
-    return res.status(200).json({ message: 'Message sent', newMessage });
+    return res.status(200).json({ message: 'Message sent', data: newMessage });
   } catch (error) {
     console.log('DIRECT MESSAGE ERROR: ', error);
     return res.status(500).json({ error: 'Error sending message' });
