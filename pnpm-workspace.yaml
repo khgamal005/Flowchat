@@ -1,2 +1,9 @@
 patchedDependencies:
   next-auth@5.0.0-beta.31: patches/next-auth@5.0.0-beta.31.patch
+
+onlyBuiltDependencies:
+  - '@prisma/engines'
+  - msgpackr-extract
+  - prisma
+  - sharp
+  - unrs-resolver
