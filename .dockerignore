@@ -1,0 +1,9 @@
+node_modules
+.next
+.history
+.git
+.gitignore
+.env*
+.history
+*.md
+*.log
