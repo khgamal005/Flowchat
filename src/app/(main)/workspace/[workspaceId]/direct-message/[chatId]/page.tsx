@@ -7,13 +7,11 @@ import {
   getUserWorkspaceData,
 } from '@/actions/workspaces';
 import { getUserWorkspaceChannels } from '@/actions/get-user-workspace-channels';
-import { Workspace } from '@/types/app';
 
-const DirectMessage = async ({
-  params: { chatId, workspaceId },
-}: {
-  params: { workspaceId: string; chatId: string };
+const DirectMessage = async (props: {
+  params: Promise<{ workspaceId: string; chatId: string }>;
 }) => {
+  const { chatId, workspaceId } = await props.params;
   const userData = await getUserData();
 
   if (!userData) return redirect('/auth');
@@ -21,6 +19,7 @@ const DirectMessage = async ({
   const [userWorkspacesData] = await getUserWorkspaceData(userData.workspaces!);
 
   const [currentWorkspaceData] = await getCurrentWorksaceData(workspaceId);
+  if (!currentWorkspaceData) return redirect('/');
 
   const userWorkspaceChannels = await getUserWorkspaceChannels(
     workspaceId,
@@ -32,28 +31,26 @@ const DirectMessage = async ({
   );
 
   return (
-    <div className='hidden md:block'>
-      <ChatGroup
-        userData={userData}
-        type='DirectMessage'
-        currentChannelData={currentChannelData}
-        currentWorkspaceData={currentWorkspaceData}
-        userWorksapcesData={userWorkspacesData as Workspace[]}
-        slug={workspaceId}
-        userWorkspaceChannels={userWorkspaceChannels}
-        chatId={chatId}
-        socketUrl='/api/web-socket/direct-messages'
-        socketQuery={{
-          channelId: currentChannelData?.id ?? '',
-          workspaceId: currentWorkspaceData.id,
-          recipientId: chatId,
-        }}
-        apiUrl='/api/direct-messages'
-        headerTitle={'DIRECT MESSAGE'}
-        paramKey='recipientId'
-        paramValue={chatId}
-      />
-    </div>
+    <ChatGroup
+      userData={userData}
+      type='DirectMessage'
+      currentChannelData={currentChannelData}
+      currentWorkspaceData={currentWorkspaceData}
+      userWorksapcesData={userWorkspacesData ?? []}
+      slug={workspaceId}
+      userWorkspaceChannels={userWorkspaceChannels}
+      chatId={chatId}
+      socketUrl='/api/web-socket/direct-messages'
+      socketQuery={{
+        channelId: currentChannelData?.id ?? '',
+        workspaceId: currentWorkspaceData.id,
+        recipientId: chatId,
+      }}
+      apiUrl='/api/direct-messages'
+      headerTitle={'DIRECT MESSAGE'}
+      paramKey='recipientId'
+      paramValue={chatId}
+    />
   );
 };
 

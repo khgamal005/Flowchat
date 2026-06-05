@@ -1,45 +1,44 @@
 'use server';
 
-import { createClient } from '@/supabase/supabaseServer';
+import { prisma } from '@/lib/prisma';
 import { Channel } from '@/types/app';
 
 export const getUserWorkspaceChannels = async (
   workspaceId: string,
   userId: string
 ) => {
-  const supabase = await createClient();
+  const workspace = await prisma.workspace.findUnique({
+    where: { id: workspaceId },
+    include: { channels: true },
+  });
 
-  const { data: workspaceData, error: workspaceError } = await supabase
-    .from('workspaces')
-    .select('channels')
-    .eq('id', workspaceId)
-    .single();
-
-  if (workspaceError) {
-    console.error(workspaceError);
+  if (!workspace) {
+    console.error('Workspace not found');
     return [];
   }
 
-  const channelIds = workspaceData.channels;
+  const channelIds = workspace.channels.map(c => c.id);
 
-  if (!channelIds || channelIds.length === 0) {
+  if (channelIds.length === 0) {
     console.log('No channels found');
     return [];
   }
 
-  const { data: channelsData, error: channelsError } = await supabase
-    .from('channels')
-    .select('*')
-    .in('id', channelIds);
+  const channelsData = await prisma.channel.findMany({
+    where: {
+      id: { in: channelIds },
+    },
+  });
 
-  if (channelsError) {
-    console.error(channelsError);
-    return [];
-  }
+  const userWorkspaceChannels: Channel[] = channelsData.map(c => ({
+    id: c.id,
+    members: null,
+    name: c.name,
+    regulators: null,
+    user_id: c.userId,
+    workspace_id: c.workspaceId,
+    created_at: c.createdAt.toISOString(),
+  }));
 
-  const userWorkspaceChannels = channelsData.filter(channel =>
-    channel.members.includes(userId)
-  );
-
-  return userWorkspaceChannels as Channel[];
+  return userWorkspaceChannels;
 };

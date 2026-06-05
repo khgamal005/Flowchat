@@ -1,20 +1,9 @@
 'use client';
 
 import { FC, useState } from "react";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { v4 as uuid } from 'uuid';
-import { zodResolver } from "@hookform/resolvers/zod";
-
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { File } from "lucide-react";
+import { useUploadThing } from "@/lib/uploadthing";
 import { toast } from "sonner";
-import { createClient } from "@/supabase/supabaseClient";
 import { Channel, User, Workspace } from '@/types/app';
-import Typography from "./ui/typography";
 
 type ChatFileUploadProps = {
   userData: User;
@@ -24,19 +13,6 @@ type ChatFileUploadProps = {
   toggleFileUploadModal: () => void;
 };
 
-const formSchema = z.object({
-  file: z
-    .any()
-    .refine((val) => val && val.length > 0, "File is required")
-    .refine(
-      (val) => {
-        const file = val?.[0];
-        return file?.type?.startsWith("image/") || file?.type === "application/pdf";
-      },
-      "Only images or PDFs are allowed"
-    ),
-});
-
 const ChatFileUpload: FC<ChatFileUploadProps> = ({
   channel,
   userData,
@@ -44,122 +20,76 @@ const ChatFileUpload: FC<ChatFileUploadProps> = ({
   recipientId,
   toggleFileUploadModal,
 }) => {
-  const [isUploading, setIsUploading] = useState(false);
+  const [file, setFile] = useState<File | null>(null);
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: { file: undefined },
+  const { startUpload, isUploading } = useUploadThing("chatFile", {
+    onUploadError: () => {
+      toast.error("Upload failed");
+    },
   });
 
-  const fileRef = form.register("file");
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = e.target.files?.[0];
+    if (!selected) return;
 
-  const handleSubmit = async (values: z.infer<typeof formSchema>) => {
-    console.log("🟢 Form values received:", values);
-    setIsUploading(true);
+    const allowed = selected.type.startsWith("image/") || selected.type === "application/pdf";
+    if (!allowed) {
+      toast.error("Only images or PDFs are allowed");
+      return;
+    }
+    setFile(selected);
+  };
 
-    const uniqueId = uuid();
-    const file = values.file?.[0];
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!file) return;
 
-    const supabase = createClient();
-
-    let fileTypePrefix = '';
-    if (file.type === 'application/pdf') {
-      fileTypePrefix = 'pdf';
-    } else if (file.type.startsWith('image/')) {
-      fileTypePrefix = 'img';
-    }
-
-    const fileName = `chat/${fileTypePrefix}-${uniqueId}`;
-
-    const { data, error } = await supabase.storage
-      .from('chat-files')
-      .upload(fileName, file, { cacheControl: '3600', upsert: false });
-
-    if (error) {
-      console.log('Error uploading file', error);
-      toast.error('Upload failed');
-      setIsUploading(false);
+    const uploadResult = await startUpload([file]);
+    if (!uploadResult?.[0]?.url) {
+      toast.error("Upload failed");
       return;
     }
 
-    let messageInsertError;
+    const fileUrl = uploadResult[0].url;
 
-    if (recipientId) {
-      // Direct message upload
-      const { error: dmError } = await supabase
-        .from("direct_messages")
-        .insert({
-          file_url: data.path,
-          user: userData.id,
-          user_one: userData.id,
-          user_two: recipientId,
-        });
+    const response = await fetch('/api/upload-file', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        fileUrl,
+        channelId: channel?.id || '',
+        workspaceId: workspaceData.id,
+        recipientId: recipientId || '',
+        userId: userData.id,
+      }),
+    });
 
-      messageInsertError = dmError;
-    } else {
-      // Channel message upload
-      const { error: msgError } = await supabase
-        .from("messages")
-        .insert({
-          file_url: data.path,
-          user_id: userData.id,
-          channel_id: channel?.id,
-          workspace_id: workspaceData.id,
-        });
-
-      messageInsertError = msgError;
-    }
-
-    if (messageInsertError) {
-      console.log("Error inserting message", messageInsertError);
+    if (!response.ok) {
       toast.error("Failed to save message");
-      setIsUploading(false);
       return;
     }
 
-    setIsUploading(false);
     toggleFileUploadModal();
     toast.success("File uploaded successfully");
-    form.reset();
+    setFile(null);
   };
 
   return (
-    <Card>
-      <CardContent className="p-6 space-y-6">
-        <div className="border border-dashed border-gray-300 rounded-lg flex flex-col gap-2 p-6 items-center">
-          <File className="w-12 h-12 text-gray-400" />
-          <Typography text="Select your file" variant="p" />
-        </div>
-
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="file"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>File</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="file"
-                      accept="image/*,application/pdf"
-                      {...fileRef}
-                      onChange={(e) => field.onChange(e.target.files)}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <Button type="submit" disabled={isUploading} className="w-full">
-              <Typography text={isUploading ? "Uploading..." : "Submit"} variant="p" />
-            </Button>
-          </form>
-        </Form>
-      </CardContent>
-    </Card>
+    <form onSubmit={handleSubmit} className="p-4 space-y-4">
+      <input
+        type="file"
+        accept="image/*,application/pdf"
+        onChange={handleFileChange}
+        className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+      />
+      <button
+        type="submit"
+        disabled={!file || isUploading}
+        className="w-full py-2 px-4 bg-blue-600 text-white rounded-md disabled:opacity-50"
+      >
+        {isUploading ? "Uploading..." : "Submit"}
+      </button>
+    </form>
   );
 };
 

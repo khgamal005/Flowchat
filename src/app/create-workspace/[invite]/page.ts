@@ -1,27 +1,31 @@
-import { workspaceInvite } from '@/actions/workspaces';
-import { createClient } from '@/supabase/supabaseServer';
+import { prisma } from '@/lib/prisma';
 import { redirect } from 'next/navigation';
+import { auth } from '@/auth';
+import { workspaceInvite } from '@/actions/workspaces';
 
-const InvitePage = async ({
-  params: { invite: inviteCode },
+export const dynamic = 'force-dynamic';
+
+export default async function InvitePage({
+  params,
 }: {
-  params: { invite: string };
-}) => {
-  await workspaceInvite(inviteCode);
+  params: Promise<{ invite: string }>;
+}) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    redirect('/auth');
+  }
 
-    const supabase = await createClient();
+  const { invite: inviteCode } = await params;
 
-  const { data } = await supabase
-    .from('workspaces')
-    .select('*')
-    .eq('invite_code', inviteCode)
-    .single();
+  const workspace = await prisma.workspace.findUnique({
+    where: { inviteCode },
+  });
 
-  if (data) {
-    redirect(`/workspace/${data.id}`);
-  } else {
+  if (!workspace) {
     redirect('/create-workspace');
   }
-};
 
-export default InvitePage;
+  await workspaceInvite(inviteCode);
+
+  redirect(`/workspace/${workspace.id}`);
+}

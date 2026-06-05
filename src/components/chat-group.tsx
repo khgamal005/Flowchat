@@ -59,28 +59,29 @@ const ChatGroup: FC<ChatGroupProps> = ({
 
   return (
     <>
-      <div className="h-[calc(100vh-256px)] overflow-y-auto [&::-webkit-scrollbar-thumb]:rounded-[6px] [&::-webkit-scrollbar-thumb]:bg-foreground/60 [&::-webkit-scrollbar-track]:bg-none [&::-webkit-scrollbar]:w-2">
-        <Sidebar
-          currentWorkspaceData={currentWorkspaceData}
-          userData={userData}
-          userWorksapcesData={userWorksapcesData as UserWorkspace[]}
-        />
+      <Sidebar
+        currentWorkspaceData={currentWorkspaceData}
+        userData={userData}
+        userWorksapcesData={userWorksapcesData as UserWorkspace[]}
+      />
 
-        <InfoSection
-          currentWorkspaceData={currentWorkspaceData}
-          userData={userData}
-          userWorkspaceChannels={userWorkspaceChannels}
-          currentChannelId={
-            type === "Channel" ? currentChannelData?.id : undefined
-          }
-        />
+      <InfoSection
+        currentWorkspaceData={currentWorkspaceData}
+        userData={userData}
+        userWorkspaceChannels={userWorkspaceChannels}
+        currentChannelId={
+          type === "Channel" ? currentChannelData?.id : undefined
+        }
+      />
+
+      <div className="flex flex-col h-full min-h-0">
         <SearchBar
           currentWorkspaceData={currentWorkspaceData}
           currentChannelData={currentChannelData}
           loggedInUserId={userData.id}
         />
 
-        <div className="p-4 relative w-full overflow-hidden">
+        <div className="flex-1 overflow-y-auto min-h-0 p-4 relative">
           <ChatHeader title={headerTitle} chatId={chatId} userData={userData} />
 
           <div className="mt-10">
@@ -107,18 +108,19 @@ const ChatGroup: FC<ChatGroupProps> = ({
             )}
           </div>
         </div>
-      </div>
-      <div className="m-4">
-        {!isVideoCall && (
-          <TextEditor
-            apiUrl={socketUrl}
-            channel={currentChannelData}
-            type={type}
-            userData={userData}
-            workspaceData={currentWorkspaceData}
-            recipientId={type === "DirectMessage" ? chatId : undefined}
-          />
-        )}
+
+        <div className="px-4 pb-4 md:pb-0">
+          {!isVideoCall && (
+            <TextEditor
+              apiUrl={socketUrl}
+              channel={currentChannelData}
+              type={type}
+              userData={userData}
+              workspaceData={currentWorkspaceData}
+              recipientId={type === "DirectMessage" ? chatId : undefined}
+            />
+          )}
+        </div>
       </div>
     </>
   );

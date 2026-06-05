@@ -27,7 +27,7 @@ export const useSocket = () => {
     const handleConnect = () => {
       console.log("🟢 useSocket: Client connected with ID:", socketInstance.id);
       setIsConnected(true);
-      setSocketId(socketInstance.id);
+      setSocketId(socketInstance.id ?? null);
     };
 
     const handleDisconnect = (reason: string) => {
@@ -46,7 +46,7 @@ export const useSocket = () => {
     socketInstance.on("connect_error", handleConnectError);
 
     // Log transport updates
-    socketInstance.io.on("transport", (transport) => {
+    socketInstance.io.on("transport" as any, (transport: any) => {
       console.log("📡 Transport changed to:", transport.name);
     });
 

@@ -1,7 +1,7 @@
 import { NextApiRequest } from "next";
 import { SockerIoApiResponse } from "@/types/app";
 import { getUserDataPages } from "@/actions/get-user-data";
-import { supabaseServerClientPages } from "@/supabase/supabaseSeverPages";
+import { prisma } from "@/lib/prisma";
 
 export default async function handler(
   req: NextApiRequest,
@@ -17,122 +17,107 @@ export default async function handler(
     const user = await getUserDataPages(req, res);
     if (!user) return res.status(401).json({ error: "Unauthorized" });
 
-    const supabase = supabaseServerClientPages(req, res);
-    const io = global._io; // ✅ same as your channel route
+    const io = (global as any)._io;
 
-    // ---------------------------------------------------
-    // 🗑️ DELETE MESSAGE
-    // ---------------------------------------------------
     if (req.method === "DELETE") {
-      const { data: message, error: fetchError } = await supabase
-        .from("direct_messages")
-        .select("id, user_one, user_two")
-        .eq("id", messageId)
-        .single();
-
-      if (fetchError) {
-        console.error("❌ Fetch Error:", fetchError);
-        return res.status(500).json({ error: "Failed to fetch message" });
-      }
+      const message = await prisma.directMessage.findUnique({
+        where: { id: parseInt(messageId) },
+      });
 
       if (!message) {
         return res.status(404).json({ error: "Message not found" });
       }
 
-      const isOwner =
-        user.id === message.user_one || user.id === message.user_two;
+      const isOwner = user.id === message.userOne || user.id === message.userTwo;
 
       if (!isOwner) {
-        return res
-          .status(403)
-          .json({ error: "You cannot delete this message" });
+        return res.status(403).json({ error: "You cannot delete this message" });
       }
 
-      const { data: deletedMsg, error: deleteError } = await supabase
-        .from("direct_messages")
-        .update({
-          is_deleted: true,
+      const deletedMsg = await prisma.directMessage.update({
+        where: { id: parseInt(messageId) },
+        data: {
+          isDeleted: true,
           content: "[deleted]",
-          file_url: null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", messageId)
-        .select("*, user_one:users!direct_messages_user_one_fkey(*), user_two:users!direct_messages_user_two_fkey(*)")
-        .single();
+          fileUrl: null,
+          updatedAt: new Date(),
+        },
+      });
 
-      if (deleteError) {
-        console.error("❌ Delete Error:", deleteError);
-        return res.status(500).json({ error: deleteError.message });
-      }
-
-      // ✅ Emit deletion event (same pattern as channel route)
       if (io) {
         io.emit("direct:message:delete", { messageId, workspaceId });
-        console.log("🟠 Emitted direct:message:delete");
-      } else {
-        console.warn("⚠️ io not found on global");
       }
 
       return res.status(200).json({ success: true });
     }
 
-    // ---------------------------------------------------
-    // ✏️ UPDATE MESSAGE
-    // ---------------------------------------------------
     if (req.method === "PATCH") {
       const { content } = req.body;
       if (!content) return res.status(400).json({ error: "Content required" });
 
-      // Check message ownership first
-      const { data: message, error: fetchError } = await supabase
-        .from("direct_messages")
-        .select("id, user_one, user_two")
-        .eq("id", messageId)
-        .single();
+      const message = await prisma.directMessage.findUnique({
+        where: { id: parseInt(messageId) },
+      });
 
-      if (fetchError || !message) {
+      if (!message) {
         return res.status(404).json({ error: "Message not found" });
       }
 
-      const isOwner =
-        user.id === message.user_one || user.id === message.user_two;
+      const isOwner = user.id === message.userOne || user.id === message.userTwo;
 
       if (!isOwner) {
         return res.status(403).json({ error: "You cannot edit this message" });
       }
 
-      const { data: updatedMessage, error: updateError } = await supabase
-        .from("direct_messages")
-        .update({
+      const updatedMessage = await prisma.directMessage.update({
+        where: { id: parseInt(messageId) },
+        data: {
           content,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", messageId)
-        .select("*, user_one:users!direct_messages_user_one_fkey(*), user_two:users!direct_messages_user_two_fkey(*)")
-        .single();
+          updatedAt: new Date(),
+        },
+        include: {
+          sender: true,
+          userOneRel: true,
+          userTwoRel: true,
+        },
+      });
 
-      if (updateError) {
-        console.error("❌ Update Error:", updateError);
-        return res.status(500).json({ error: updateError.message });
-      }
+      const mapUser = (u: any) => ({
+        avatar_url: u.avatarUrl,
+        channels: null,
+        created_at: u.createdAt.toISOString(),
+        email: u.email,
+        id: u.id,
+        is_away: u.isAway,
+        name: u.name,
+        phone: u.phone,
+        type: u.type,
+        workspaces: null,
+      });
 
-      // ✅ Emit update event (same key as in channel router)
+      const data = {
+        id: String(updatedMessage.id),
+        content: updatedMessage.content,
+        file_url: updatedMessage.fileUrl,
+        user_id: updatedMessage.user,
+        is_deleted: updatedMessage.isDeleted,
+        created_at: updatedMessage.createdAt.toISOString(),
+        updated_at: updatedMessage.updatedAt.toISOString(),
+        user: mapUser(updatedMessage.sender),
+        user_one: mapUser(updatedMessage.userOneRel),
+        user_two: mapUser(updatedMessage.userTwoRel),
+      };
+
       if (io) {
-        io.emit("direct:message:update", updatedMessage);
-        console.log("🟢 Emitted direct:message:update");
-      } else {
-        console.warn("⚠️ io not found on global");
+        io.emit("direct:message:update", data);
       }
 
-      return res.status(200).json(updatedMessage);
+      return res.status(200).json(data);
     }
 
-    // ---------------------------------------------------
     return res.status(405).json({ error: "Method not allowed" });
   } catch (err: any) {
-    console.error("🔥 API Error:", err);
-    return res
-      .status(500)
-      .json({ error: err.message || "Internal server error" });
+    console.error("API Error:", err);
+    return res.status(500).json({ error: err.message || "Internal server error" });
   }
 }

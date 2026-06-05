@@ -86,7 +86,7 @@ const CreateWorkspace = () => {
       <DialogContent>
         <DialogHeader>
           <DialogTitle className='my-4'>
-            <Typography variant='h4' text='Create workspace' />
+            Create workspace
           </DialogTitle>
         </DialogHeader>
         <Form {...form}>
@@ -104,7 +104,7 @@ const CreateWorkspace = () => {
                   </FormControl>
                   <FormDescription>
                     <Typography
-                      variant='p'
+                      variant='span'
                       text='This is your workspace name'
                     />
                   </FormDescription>

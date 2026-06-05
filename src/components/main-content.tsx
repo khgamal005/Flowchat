@@ -15,7 +15,6 @@ const MainContent: FC<{ children: ReactNode }> = ({ children }) => {
     setIsMounted(true);
   }, []);
 
-  // Don't render theme/color dependent styles until mounted on client
   if (!isMounted) {
     return (
       <div className="md:px-2 md:pb-2 md:pt-14 md:h-screen bg-primary-dark">

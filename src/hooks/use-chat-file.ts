@@ -1,44 +1,27 @@
 'use client';
 
-import { createClient } from '@/supabase/supabaseClient';
 import { useEffect, useState } from 'react';
 
-
-export const useChatFile = (filePath: string) => {
+export const useChatFile = (fileUrl: string) => {
   const [publicUrl, setPublicUrl] = useState('');
   const [fileType, setFileType] = useState('');
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  const supabase = createClient();
 
   useEffect(() => {
-    const fetchFile = async () => {
-      try {
-        const {
-          data: { publicUrl },
-        } = await supabase.storage.from('chat-files').getPublicUrl(filePath);
+    if (fileUrl) {
+      setPublicUrl(fileUrl);
 
-        if (publicUrl) {
-          setPublicUrl(publicUrl);
-
-          if (filePath.startsWith('chat/img-')) {
-            setFileType('image');
-          } else if (filePath.startsWith('chat/pdf-')) {
-            setFileType('pdf');
-          }
-        }
-      } catch (error: any) {
-        setError(error);
-      } finally {
-        setLoading(false);
+      if (
+        fileUrl.match(/\.(webp|jpg|jpeg|png|gif|svg)$/i) ||
+        fileUrl.includes('utfs.io')
+      ) {
+        setFileType('image');
+      } else if (fileUrl.match(/\.pdf$/i)) {
+        setFileType('pdf');
       }
-    };
-
-    if (filePath) {
-      fetchFile();
+      setLoading(false);
     }
-  }, [filePath, supabase.storage]);
+  }, [fileUrl]);
 
-  return { publicUrl, fileType, loading, error };
+  return { publicUrl, fileType, loading };
 };

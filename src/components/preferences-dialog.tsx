@@ -27,10 +27,10 @@ const PreferencesDialog = () => {
       </DialogTrigger>
 
       <DialogContent className='max-w-xs md:w-fit'>
-        <DialogTitle>
-          <Typography text='Preferences' variant='h3' className='py-5' />
-          <hr className='bg-gray-200' />
+        <DialogTitle className='py-5'>
+          Preferences
         </DialogTitle>
+        <hr className='bg-gray-200' />
         <Tabs orientation='horizontal' defaultValue='themes'>
           <TabsList>
             <TabsTrigger value='themes'>

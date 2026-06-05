@@ -1,23 +1,21 @@
-import { getUserData } from '@/actions/get-user-data';
-import { createClient } from '@/supabase/supabaseServer';
+import { auth } from '@/auth';
+import { prisma } from '@/lib/prisma';
 import { NextResponse } from 'next/server';
 
 function getPagination(page: number, size: number) {
   const limit = size ? +size : 10;
-  const from = page ? page * limit : 0;
-  const to = page ? from + limit - 1 : limit - 1;
+  const skip = page ? page * limit : 0;
 
-  return { from, to };
+  return { skip, take: limit };
 }
 
 export async function GET(req: Request) {
   try {
-    const supabase = await createClient();
-    const userData = await getUserData();
+    const session = await auth();
     const { searchParams } = new URL(req.url);
     const channelId = searchParams.get('channelId');
 
-    if (!userData) {
+    if (!session?.user?.id) {
       return new Response('Unauthorized', { status: 401 });
     }
 
@@ -28,21 +26,43 @@ export async function GET(req: Request) {
     const page = Number(searchParams.get('page'));
     const size = Number(searchParams.get('size'));
 
-    const { from, to } = getPagination(page, size);
+    const { skip, take } = getPagination(page, size);
 
-    const { data, error } = await supabase
-      .from('messages')
-      .select('*, user: user_id (*)')
-      .eq('channel_id', channelId)
-      .range(from, to)
-      .order('created_at', { ascending: false });
+    const data = await prisma.message.findMany({
+      where: { channelId },
+      include: {
+        user: true,
+      },
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take,
+    });
 
-    if (error) {
-      console.log('GET MESSAGES ERROR: ', error);
-      return new Response('Bad Request', { status: 400 });
-    }
+    const mapped = data.map(msg => ({
+      id: msg.id,
+      content: msg.content,
+      file_url: msg.fileUrl,
+      channel_id: msg.channelId,
+      user_id: msg.userId,
+      workspace_id: msg.workspaceId,
+      is_deleted: msg.isDeleted,
+      created_at: msg.createdAt.toISOString(),
+      updated_at: msg.updatedAt.toISOString(),
+      user: {
+        avatar_url: msg.user.avatarUrl,
+        channels: null,
+        created_at: msg.user.createdAt.toISOString(),
+        email: msg.user.email,
+        id: msg.user.id,
+        is_away: msg.user.isAway,
+        name: msg.user.name,
+        phone: msg.user.phone,
+        type: msg.user.type,
+        workspaces: null,
+      },
+    }));
 
-    return NextResponse.json({ data });
+    return NextResponse.json({ data: mapped });
   } catch (error) {
     console.log('SERVER ERROR: ', error);
     return new Response('Internal Server Error', { status: 500 });

@@ -1,8 +1,7 @@
 import { NextApiRequest } from 'next';
-
+import { prisma } from '@/lib/prisma';
 import { getUserDataPages } from '@/actions/get-user-data';
 import { SockerIoApiResponse } from '@/types/app';
-import { supabaseServerClientPages } from '@/supabase/supabaseSeverPages';
 
 export default async function handler(
   req: NextApiRequest,
@@ -30,40 +29,58 @@ export default async function handler(
       return res.status(400).json({ message: 'Bad request' });
     }
 
-    const supabase = supabaseServerClientPages(req, res);
+    const channel = await prisma.channel.findUnique({
+      where: { id: channelId as string },
+      include: {
+        members: { where: { userId: userData.id } },
+      },
+    });
 
-    const { data: channelData } = await supabase
-      .from('channels')
-      .select('*')
-      .eq('id', channelId)
-      .contains('members', [userData.id]);
-
-    if (!channelData?.length) {
+    if (!channel || channel.members.length === 0) {
       return res.status(403).json({ message: 'Channel not found' });
     }
 
-    const { error: creatingMessageError, data } = await supabase
-      .from('messages')
-      .insert({
-        user_id: userData.id,
-        workspace_id: workspaceId,
-        channel_id: channelId,
+    const message = await prisma.message.create({
+      data: {
+        userId: userData.id,
+        workspaceId: workspaceId as string,
+        channelId: channelId as string,
         content,
-        file_url: fileUrl,
-      })
-      .select('*, user: user_id(*)')
-      .order('created_at', { ascending: true })
-      .single();
+        fileUrl,
+      },
+      include: {
+        user: true,
+      },
+    });
 
-    if (creatingMessageError) {
-      console.log('MESSAEGE CREATION ERROR: ', creatingMessageError);
-      return res.status(500).json({ message: 'Internal server error' });
+    const data = {
+      id: message.id,
+      content: message.content,
+      file_url: message.fileUrl,
+      channel_id: message.channelId,
+      user_id: message.userId,
+      workspace_id: message.workspaceId,
+      is_deleted: message.isDeleted,
+      created_at: message.createdAt.toISOString(),
+      updated_at: message.updatedAt.toISOString(),
+      user: {
+        avatar_url: message.user.avatarUrl,
+        channels: null,
+        created_at: message.user.createdAt.toISOString(),
+        email: message.user.email,
+        id: message.user.id,
+        is_away: message.user.isAway,
+        name: message.user.name,
+        phone: message.user.phone,
+        type: message.user.type,
+        workspaces: null,
+      },
+    };
+
+    const io = (global as any)._io;
+    if (io) {
+      io.emit('channel:message:new', data);
     }
-
-    res?.socket?.server?.io?.emit(
-      `channel:${channelId}:channel-messages`,
-      data
-    );
 
     return res.status(201).json({ message: 'Message created', data });
   } catch (error) {
@@ -71,4 +88,3 @@ export default async function handler(
     return res.status(500).json({ message: 'Internal server error' });
   }
 }
-

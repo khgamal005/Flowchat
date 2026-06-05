@@ -1,10 +1,10 @@
-// lib/supabase/server-client.ts - FIXED VERSION
+// lib/supabase/server-client.ts
 "use server";
 
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
-export async function createClient() {
+export async function supabaseServerClient() {
   const cookieStore = await cookies();
 
   return createServerClient(
@@ -20,8 +20,8 @@ export async function createClient() {
             cookiesToSet.forEach(({ name, value, options }) => {
               cookieStore.set(name, value, options);
             });
-          } catch (error) {
-            // Ignore in server components/actions
+          } catch {
+            // ignore in server components/actions
           }
         },
       },

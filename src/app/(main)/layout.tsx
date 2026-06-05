@@ -6,6 +6,8 @@ import { ColorPreferencesProvider } from "@/providers/color-prefrences";
 import { QueryProvider } from "@/providers/query-provider";
 import MainContent from "@/components/main-content";
 import { WebSocketProvider } from "@/providers/web-socket";
+import { MobileNavProvider } from "@/providers/mobile-nav-context";
+import MobileBottomNav from "@/components/mobile-bottom-nav";
 import SocketTest from "@/components/SocketTest";
 
 const MainLayout: FC<{ children: ReactNode }> = ({ children }) => {
@@ -17,13 +19,18 @@ const MainLayout: FC<{ children: ReactNode }> = ({ children }) => {
       disableTransitionOnChange
     >
       <WebSocketProvider>
-        <ColorPreferencesProvider>
-          <MainContent>
-            <QueryProvider>{children}</QueryProvider>
-                      {/* <SocketTest /> Add this line */}
-
-          </MainContent>
-        </ColorPreferencesProvider>
+        <MobileNavProvider>
+          <ColorPreferencesProvider>
+            <MainContent>
+              <QueryProvider>
+                <div className="pb-14 md:pb-0">
+                  {children}
+                </div>
+              </QueryProvider>
+            </MainContent>
+            <MobileBottomNav />
+          </ColorPreferencesProvider>
+        </MobileNavProvider>
       </WebSocketProvider>
     </ThemeProvider>
   );

@@ -1,3 +1,5 @@
+import dotenv from 'dotenv';
+dotenv.config({ path: '.env.local' });
 import { createServer } from 'http';
 import next from 'next';
 import { Server } from 'socket.io';

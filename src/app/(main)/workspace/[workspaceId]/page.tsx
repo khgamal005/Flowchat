@@ -6,7 +6,6 @@ import {
   getUserWorkspaceData,
 } from '@/actions/workspaces';
 import Sidebar from '@/components/sidebar';
-import { Workspace as UserWorkspace } from '@/types/app';
 import InfoSection from '@/components/info-section';
 import { getUserWorkspaceChannels } from '@/actions/get-user-workspace-channels';
 import NoDataScreen from '@/components/no-data-component';
@@ -20,6 +19,7 @@ const Workspace = async (props: { params: Promise<{ workspaceId: string }> }) =>
 
   const [userWorkspaceData] = await getUserWorkspaceData(userData.workspaces!);
   const [currentWorkspaceData] = await getCurrentWorksaceData(workspaceId);
+  if (!currentWorkspaceData) return redirect('/');
   const userWorkspaceChannels = await getUserWorkspaceChannels(
     currentWorkspaceData.id,
     userData.id
@@ -33,26 +33,23 @@ const Workspace = async (props: { params: Promise<{ workspaceId: string }> }) =>
 
   return (
     <>
-      <div className='hidden md:block'>
-        <Sidebar
-          currentWorkspaceData={currentWorkspaceData}
-          userData={userData}
-          userWorksapcesData={userWorkspaceData as UserWorkspace[]}
-        />
-        <InfoSection
-          currentWorkspaceData={currentWorkspaceData}
-          userData={userData}
-          userWorkspaceChannels={userWorkspaceChannels}
-          currentChannelId=''
-        />
+      <Sidebar
+        currentWorkspaceData={currentWorkspaceData}
+        userData={userData}
+        userWorksapcesData={userWorkspaceData ?? []}
+      />
+      <InfoSection
+        currentWorkspaceData={currentWorkspaceData}
+        userData={userData}
+        userWorkspaceChannels={userWorkspaceChannels}
+        currentChannelId=''
+      />
 
-        <NoDataScreen
-          userId={userData.id}
-          workspaceId={currentWorkspaceData.id}
-          workspaceName={currentWorkspaceData.name}
-        />
-      </div>
-      <div className='md:hidden block min-h-screen'>Mobile</div>
+      <NoDataScreen
+        userId={userData.id}
+        workspaceId={currentWorkspaceData.id}
+        workspaceName={currentWorkspaceData.name}
+      />
     </>
   );
 };

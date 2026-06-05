@@ -91,7 +91,7 @@ return (
       <IntroBanner
         type={type}
         name={name}
-        creationDate={channelData?.created_at}
+        creationDate={channelData?.created_at ?? ''}
       />
     )}
 

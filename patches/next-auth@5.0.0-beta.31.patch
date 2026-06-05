@@ -1,0 +1,41 @@
+diff --git a/lib/actions.js b/lib/actions.js
+index aaddb37c357984eeafddae8d37b5560cd7094123..69cdeb9b83305a27e4fd44b14998fcff02863f6d 100644
+--- a/lib/actions.js
++++ b/lib/actions.js
+@@ -1,8 +1,6 @@
+ import { Auth, raw, skipCSRFCheck, createActionURL } from "@auth/core";
+-// @ts-expect-error Next.js does not yet correctly use the `package.json#exports` field
+-import { headers as nextHeaders, cookies } from "next/headers";
+-// @ts-expect-error Next.js does not yet correctly use the `package.json#exports` field
+-import { redirect } from "next/navigation";
++import { headers as nextHeaders, cookies } from "next/headers.js";
++import { redirect } from "next/navigation.js";
+ export async function signIn(provider, options = {}, authorizationParams, config) {
+     const headers = new Headers(await nextHeaders());
+     const { redirect: shouldRedirect = true, redirectTo, ...rest } = options instanceof FormData ? Object.fromEntries(options) : options;
+diff --git a/lib/env.js b/lib/env.js
+index 86672911290a116ab5ee6d79029b066b7ac0d5c2..76a7acab244b78adf05b56c6d70b0a6b4b5b6d11 100644
+--- a/lib/env.js
++++ b/lib/env.js
+@@ -1,5 +1,4 @@
+-// @ts-expect-error Next.js does not yet correctly use the `package.json#exports` field
+-import { NextRequest } from "next/server";
++import { NextRequest } from "next/server.js";
+ import { setEnvDefaults as coreSetEnvDefaults } from "@auth/core";
+ /** If `NEXTAUTH_URL` or `AUTH_URL` is defined, override the request's URL. */
+ export function reqWithEnvURL(req) {
+diff --git a/lib/index.js b/lib/index.js
+index a65754e429f5da4f3ff7689808bb620d5967eea1..b23cb6733e919bd3b050cf7c90181455ef5909b5 100644
+--- a/lib/index.js
++++ b/lib/index.js
+@@ -1,8 +1,6 @@
+ import { Auth, createActionURL } from "@auth/core";
+-// @ts-expect-error Next.js does not yet correctly use the `package.json#exports` field
+-import { headers } from "next/headers";
+-// @ts-expect-error Next.js does not yet correctly use the `package.json#exports` field
+-import { NextResponse } from "next/server";
++import { headers } from "next/headers.js";
++import { NextResponse } from "next/server.js";
+ import { reqWithEnvURL } from "./env.js";
+ async function getSession(headers, config) {
+     const url = createActionURL("session", 

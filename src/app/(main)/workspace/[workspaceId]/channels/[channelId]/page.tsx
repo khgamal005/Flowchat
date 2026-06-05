@@ -1,7 +1,6 @@
 import { redirect } from 'next/navigation';
 
 import { getUserData } from '@/actions/get-user-data';
-import { Workspace as UserWorkspace } from '@/types/app';
 import {
   getCurrentWorksaceData,
   getUserWorkspaceData,
@@ -21,6 +20,8 @@ const ChannelId = async (props: {
   const [userWorkspaceData] = await getUserWorkspaceData(userData.workspaces!);
   const [currentWorkspaceData] = await getCurrentWorksaceData(workspaceId);
 
+  if (!currentWorkspaceData) return redirect('/');
+
   const userWorkspaceChannels = await getUserWorkspaceChannels(
     currentWorkspaceData.id,
     userData.id
@@ -33,27 +34,25 @@ const ChannelId = async (props: {
   if (!currentChannelData) return redirect('/');
 
   return (
-    <div className='hidden md:block'>
-      <ChatGroup
-        type='Channel'
-        userData={userData}
-        currentChannelData={currentChannelData}
-        currentWorkspaceData={currentWorkspaceData}
-        slug={workspaceId}
-        chatId={channelId}
-        userWorkspaceChannels={userWorkspaceChannels}
-        socketUrl='/api/web-socket/messages'
-        socketQuery={{
-          channelId: currentChannelData.id,
-          workspaceId: currentWorkspaceData.id,
-        }}
-        apiUrl='/api/messages'
-        headerTitle={currentChannelData.name}
-        paramKey='channelId'
-        paramValue={channelId}
-        userWorksapcesData={userWorkspaceData as UserWorkspace[]}
-      />
-    </div>
+    <ChatGroup
+      type='Channel'
+      userData={userData}
+      currentChannelData={currentChannelData}
+      currentWorkspaceData={currentWorkspaceData}
+      slug={workspaceId}
+      chatId={channelId}
+      userWorkspaceChannels={userWorkspaceChannels}
+      socketUrl='/api/web-socket/messages'
+      socketQuery={{
+        channelId: currentChannelData.id,
+        workspaceId: currentWorkspaceData.id,
+      }}
+      apiUrl='/api/messages'
+      headerTitle={currentChannelData.name}
+      paramKey='channelId'
+      paramValue={channelId}
+      userWorksapcesData={userWorkspaceData ?? []}
+    />
   );
 };
 

@@ -36,15 +36,15 @@ export const getSocket = () => {
     console.log("🆔 Socket.IO: New ID:", socket.id);
   });
 
-  socket.io.on("reconnect_attempt", (attempt) => {
+  socket.io.on("reconnect_attempt" as any, (attempt: any) => {
     console.log("🔄 Socket.IO: Reconnection attempt", attempt);
   });
 
-  socket.io.on("ping", () => {
+  socket.io.on("ping" as any, () => {
     console.log("📡 Socket.IO: Ping");
   });
 
-  socket.io.on("pong", () => {
+  socket.io.on("pong" as any, () => {
     console.log("📡 Socket.IO: Pong");
   });
 

@@ -1,68 +1,81 @@
-// actions/get-user-data.ts
-import { createClient } from '@/supabase/supabaseServer';
-import { NextApiRequest, NextApiResponse } from 'next';
-import { supabaseServerClientPages } from '@/supabase/supabaseSeverPages';
-import { User } from '@/types/app';
+import { auth } from "@/auth";
+import { prisma } from "@/lib/prisma";
+import { NextApiRequest, NextApiResponse } from "next";
+import { User } from "@/types/app";
 
 export const getUserData = async (): Promise<User | null> => {
   try {
-    const supabase = await createClient();
+    const session = await auth();
 
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-
-    if (userError) {
-      console.log('Auth error in getUserData:', userError);
+    if (!session?.user?.id) {
       return null;
     }
+
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      include: {
+        workspaces: true,
+      },
+    });
 
     if (!user) {
-      console.log('No user found');
       return null;
     }
 
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', user.id)
-      .single(); // Use single() instead of [0]
-
-    if (error) {
-      console.log('Database error:', error);
-      return null;
-    }
-
-    return data;
+    return {
+      avatar_url: user.avatarUrl,
+      channels: null,
+      created_at: user.createdAt.toISOString(),
+      email: user.email,
+      id: user.id,
+      is_away: user.isAway,
+      name: user.name,
+      phone: user.phone,
+      type: user.type,
+      workspaces: user.workspaces.map((uw) => uw.workspaceId),
+    } as User;
   } catch (error) {
-    console.log('Unexpected error in getUserData:', error);
+    console.log("Unexpected error in getUserData:", error);
     return null;
   }
 };
-
 
 export const getUserDataPages = async (
   req: NextApiRequest,
   res: NextApiResponse
 ): Promise<User | null> => {
-  const supabase = supabaseServerClientPages(req, res);
+  try {
+    const session = await auth(req, res);
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    if (!session?.user?.id) {
+      return null;
+    }
 
-  if (!user) {
-    console.log('NO USER', user);
-    return null;
-  }
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      include: {
+        workspaces: true,
+      },
+    });
 
-  const { data, error } = await supabase
-    .from('users')
-    .select('*')
-    .eq('id', user.id);
+    if (!user) {
+      return null;
+    }
 
-  if (error) {
+    return {
+      avatar_url: user.avatarUrl,
+      channels: null,
+      created_at: user.createdAt.toISOString(),
+      email: user.email,
+      id: user.id,
+      is_away: user.isAway,
+      name: user.name,
+      phone: user.phone,
+      type: user.type,
+      workspaces: user.workspaces.map((uw) => uw.workspaceId),
+    } as User;
+  } catch (error) {
     console.log(error);
     return null;
   }
-
-  return data ? data[0] : null;
 };

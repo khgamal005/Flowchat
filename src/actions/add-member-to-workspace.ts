@@ -1,17 +1,11 @@
-import { createClient } from "@/supabase/supabaseServer";
+import { prisma } from "@/lib/prisma";
 
 export const addMemberToWorkspace = async (
   userId: string,
-  workspaceId: number
+  workspaceId: string
 ) => {
-    const supabase = await createClient();
-
-  //   Update the workspace members
-  const { data: addMemberToWorkspaceData, error: addMemberToWorkspaceError } =
-    await supabase.rpc('add_member_to_workspace', {
-      user_id: userId,
-      workspace_id: workspaceId,
-    });
-
-  return [addMemberToWorkspaceData, addMemberToWorkspaceError];
+  const data = await prisma.workspaceMember.create({
+    data: { userId, workspaceId },
+  });
+  return [data, null];
 };

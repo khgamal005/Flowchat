@@ -2,7 +2,7 @@ import { cn } from '@/lib/utils';
 import { FC, HTMLAttributes } from 'react';
 
 type TypographyProps = {
-  variant?: 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'p';
+  variant?: 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'p' | 'span';
   text: string;
   className?: string;
 } & HTMLAttributes<HTMLElement>;
@@ -21,6 +21,7 @@ const Typography: FC<TypographyProps> = ({
     h5: 'scroll-m-8 text-lg font-normal tracking-tight lg:text-xl',
     h6: 'scroll-m-6 text-base font-normal tracking-tight lg:text-xl',
     p: 'scroll-m-4 text-sm font-normal tracking-tight lg:text-base',
+    span: 'text-sm font-normal',
   };
 
   const Tag = variant;

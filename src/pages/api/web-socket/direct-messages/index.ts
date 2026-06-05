@@ -1,7 +1,7 @@
 import { SockerIoApiResponse } from '@/types/app';
 import { NextApiRequest } from 'next';
 import { getUserDataPages } from '@/actions/get-user-data';
-import { supabaseServerClientPages } from '@/supabase/supabaseSeverPages';
+import { prisma } from '@/lib/prisma';
 
 export default async function handler(
   req: NextApiRequest,
@@ -25,36 +25,54 @@ export default async function handler(
     }
 
     const { content, fileUrl } = req.body;
-    const supabase = supabaseServerClientPages(req, res);
 
-    const { data: newMessage, error: sendingMessageError } = await supabase
-      .from('direct_messages')
-      .insert({
+    const newMessage = await prisma.directMessage.create({
+      data: {
         content,
-        file_url: fileUrl,
+        fileUrl,
         user: userData.id,
-        user_one: userData.id,
-        user_two: recipientId,
-      })
-      .select('*, user (*), user_one (*), user_two (*)')
-      .order('created_at', { ascending: false })
-      .single();
+        userOne: userData.id,
+        userTwo: recipientId as string,
+      },
+      include: {
+        sender: true,
+        userOneRel: true,
+        userTwoRel: true,
+      },
+    });
 
-    if (sendingMessageError) {
-      console.log('DIRECT MESSAGE ERROR: ', sendingMessageError);
-      return res.status(500).json({ error: 'Error sending message' });
-    }
+    const mapUser = (u: any) => ({
+      avatar_url: u.avatarUrl,
+      channels: null,
+      created_at: u.createdAt.toISOString(),
+      email: u.email,
+      id: u.id,
+      is_away: u.isAway,
+      name: u.name,
+      phone: u.phone,
+      type: u.type,
+      workspaces: null,
+    });
 
-    // ✅ Emit the event through Socket.IO
+    const data = {
+      id: String(newMessage.id),
+      content: newMessage.content,
+      file_url: newMessage.fileUrl,
+      user_id: newMessage.user,
+      is_deleted: newMessage.isDeleted,
+      created_at: newMessage.createdAt.toISOString(),
+      updated_at: newMessage.updatedAt.toISOString(),
+      user: mapUser(newMessage.sender),
+      user_one: mapUser(newMessage.userOneRel),
+      user_two: mapUser(newMessage.userTwoRel),
+    };
+
     const io = (global as any)._io;
     if (io) {
-      io.emit('direct:message:new', newMessage);
-      console.log('📤 Emitted direct:message:new', newMessage);
-    } else {
-      console.warn('⚠️ No Socket.IO instance found');
+      io.emit('direct:message:new', data);
     }
 
-    return res.status(200).json({ message: 'Message sent', newMessage });
+    return res.status(200).json({ message: 'Message sent', data });
   } catch (error) {
     console.log('DIRECT MESSAGE ERROR: ', error);
     return res.status(500).json({ error: 'Error sending message' });

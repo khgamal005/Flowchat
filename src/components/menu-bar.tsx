@@ -19,11 +19,6 @@ import Picker from '@emoji-mart/react'
 import { BsEmojiSmile } from 'react-icons/bs'
 
 import Typography from '@/components/ui/typography'
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover'
 
 // Client-only wrapper
 function ClientOnly({ children }: { children: React.ReactNode }) {

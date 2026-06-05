@@ -1,22 +1,15 @@
 'use server';
 
-import { createClient } from "@/supabase/supabaseServer";
-
-
-
-
-
-
+import { signIn } from "@/auth";
 
 export async function registerWithEmail({ email }: { email: string }) {
-
-    const supabase = await createClient();
-  const response = await supabase.auth.signInWithOtp({
-    email,
-    options: {
-      emailRedirectTo: process.env.NEXT_PUBLIC_CURRENT_ORIGIN,
-    },
-  });
-
-  return JSON.stringify(response);
+  try {
+    await signIn("resend", {
+      email,
+      redirectTo: "/",
+    });
+    return JSON.stringify({ data: { email }, error: null });
+  } catch (error) {
+    return JSON.stringify({ error: "Failed to send magic link" });
+  }
 }

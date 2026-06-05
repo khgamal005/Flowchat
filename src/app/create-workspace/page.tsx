@@ -5,7 +5,7 @@ import slugify from "slugify";
 import { v4 as uuid } from "uuid";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-import { createBrowserClient } from "@supabase/ssr";
+import { useSession } from "next-auth/react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -76,72 +76,42 @@ function Step1() {
 
 // ✅ Step 2 - Upload image and create workspace
 function Step2() {
-  const { setCurrStep, updateImageUrl, imageUrl, name } =
+  const { imageUrl, name, updateImageUrl, setCurrStep } =
     useCreateWorkspaceValues();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { data: session } = useSession();
   const router = useRouter();
 
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  );
-
-  // ✅ Ensure user is logged in
   useEffect(() => {
-    const fetchUser = async () => {
-      const {
-        data: { user },
-        error,
-      } = await supabase.auth.getUser();
-
-      if (error || !user) {
-        console.warn("No user found in client Supabase:", error);
-        toast.error("Session expired. Please log in again.");
-        router.push("/auth");
-      } else {
-        console.log("User in Step2 (client):", user);
-      }
-    };
-
-    fetchUser();
-  }, [router, supabase]);
+    if (session === null) {
+      toast.error("Session expired. Please log in again.");
+      router.push("/auth");
+    }
+  }, [session, router]);
 
   const handleSubmit = async () => {
     if (isSubmitting || !name) return;
 
+    if (!session?.user?.id) {
+      toast.error("Session expired. Please log in again.");
+      router.push("/auth");
+      return;
+    }
+
     setIsSubmitting(true);
     try {
-      // ✅ Get current session from Supabase
-      const {
-        data: { session },
-        error: sessionError,
-      } = await supabase.auth.getSession();
-
-      if (sessionError || !session) {
-        toast.error("Session expired. Please log in again.");
-        router.push("/auth");
-        return;
-      }
-
       const slug = slugify(name, { lower: true, strict: true });
       const invite_code = uuid();
 
-      // ✅ Pass the access_token so the server can re-auth
       const result = await createWorkspace({
         imageUrl,
         name,
         slug,
         invite_code,
-        access_token: session.access_token,
       });
 
       if (result?.error) {
-        toast.error(
-          result.error === "Not authenticated"
-            ? "Please sign in again"
-            : "Couldn't create workspace. Please try again."
-        );
-        if (result.error === "Not authenticated") router.push("/auth");
+        toast.error("Couldn't create workspace. Please try again.");
         return;
       }
 

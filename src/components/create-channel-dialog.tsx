@@ -75,7 +75,7 @@ const CreateChannelDialog: FC<{
       <DialogContent>
         <DialogHeader>
           <DialogTitle className='my-4 bg'>
-            <Typography text='Create channel ' variant='h3' />
+            Create channel
           </DialogTitle>
         </DialogHeader>
 
@@ -95,8 +95,7 @@ const CreateChannelDialog: FC<{
                   <FormDescription>
                     <Typography
                       text='This is your channel name'
-                      variant='p'
-                      className='mb-4'
+                      variant='span'
                     />
                   </FormDescription>
                   <FormMessage />

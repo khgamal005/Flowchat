@@ -9,38 +9,42 @@ import { UploadDropzone } from '@/lib/uploadthing';
 const ImageUpload = () => {
   const { imageUrl, updateImageUrl } = useCreateWorkspaceValues();
   const [isUploading, setIsUploading] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
-  const handleUploadComplete = async (res: any) => {
-    try {
-      setIsUploading(false);
-      
-      if (res?.[0]?.url) {
-        // Wait a bit to ensure all upload processes are complete
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        updateImageUrl(res[0].url);
-        toast.success('Image uploaded successfully');
-      }
-    } catch (error) {
-      console.error('Error handling upload completion:', error);
-      toast.error('Failed to process image upload');
+  const handleUploadComplete = (res: any) => {
+    setIsUploading(false);
+
+    if (res?.[0]?.url) {
+      const url = res[0].url;
+      setPreviewUrl(url);
+      updateImageUrl(url);
+      toast.success('Image uploaded successfully');
     }
   };
 
   const handleUploadError = (error: Error) => {
     setIsUploading(false);
-    console.error('Upload error:', error);
+    setPreviewUrl(null);
     toast.error('Image upload failed. Please try again.');
   };
 
   const handleUploadStart = () => {
     setIsUploading(true);
+    setPreviewUrl(null);
   };
 
-  if (imageUrl) {
+  const handleRemove = () => {
+    setPreviewUrl(null);
+    updateImageUrl('');
+  };
+
+  const displayUrl = previewUrl || imageUrl;
+
+  if (displayUrl) {
     return (
       <div className='flex items-center justify-center h-32 w-32 relative'>
         <Image
-          src={imageUrl}
+          src={displayUrl}
           className='object-cover w-full h-full rounded-md'
           alt='workspace'
           width={320}
@@ -49,22 +53,15 @@ const ImageUpload = () => {
         />
         <ImCancelCircle
           size={30}
-          onClick={() => !isUploading && updateImageUrl('')}
-          className={`absolute cursor-pointer -right-2 -top-2 z-10 hover:scale-110 ${
-            isUploading ? 'opacity-50 cursor-not-allowed' : ''
-          }`}
+          onClick={handleRemove}
+          className='absolute cursor-pointer -right-2 -top-2 z-10 hover:scale-110'
         />
-        {isUploading && (
-          <div className="absolute inset-0 bg-black bg-opacity-50 rounded-md flex items-center justify-center">
-            <div className="text-white text-sm">Processing...</div>
-          </div>
-        )}
       </div>
     );
   }
 
   return (
-    <div className={isUploading ? 'opacity-50' : ''}>
+    <div className={isUploading ? 'pointer-events-none opacity-50' : ''}>
       <UploadDropzone
         endpoint='workspaceImage'
         onClientUploadComplete={handleUploadComplete}
@@ -72,7 +69,7 @@ const ImageUpload = () => {
         onUploadBegin={handleUploadStart}
       />
       {isUploading && (
-        <div className="text-center mt-2 text-sm text-gray-500">
+        <div className='text-center mt-2 text-sm text-gray-500'>
           Uploading image... Please wait.
         </div>
       )}

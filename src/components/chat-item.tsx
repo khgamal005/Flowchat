@@ -66,9 +66,11 @@ const ChatItem: FC<ChatItemProps> = ({
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  const stripHtml = (html: string) => html.replace(/<[^>]*>/g, '');
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: { content: content ?? '' },
+    defaultValues: { content: stripHtml(content ?? '') },
   });
 
   const isOwner = currentUser.id === user.id;
@@ -81,7 +83,7 @@ const ChatItem: FC<ChatItemProps> = ({
   const isLoading = form.formState.isSubmitting;
 
   useEffect(() => {
-    form.reset({ content: content ?? '' });
+    form.reset({ content: stripHtml(content ?? '') });
   }, [content, form]);
 
   useEffect(() => {

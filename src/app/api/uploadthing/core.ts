@@ -1,6 +1,5 @@
-// app/api/uploadthing/core.ts
 import { createUploadthing, type FileRouter } from 'uploadthing/next';
-import { createClient } from '@/supabase/supabaseServer';
+import { auth } from '@/auth';
 
 const f = createUploadthing();
 
@@ -9,30 +8,25 @@ export const ourFileRouter = {
     image: { maxFileSize: '4MB', maxFileCount: 1 },
   })
     .middleware(async () => {
-      try {
-        const supabase = await createClient();
-        const { data: { user } } = await supabase.auth.getUser();
-        
-        if (!user) {
-          throw new Error('Not authenticated');
-        }
-        
-        console.log('UploadThing - Authenticated user:', user.id);
-        return { userId: user.id };
-        
-      } catch (error) {
-        console.error('UploadThing auth error:', error);
-        throw new Error('Authentication required');
-      }
+      const session = await auth();
+      if (!session?.user?.id) throw new Error('Not authenticated');
+      return { userId: session.user.id };
     })
     .onUploadComplete(async ({ metadata, file }) => {
-      console.log('Upload completed for user:', metadata.userId);
-      console.log('File URL:', file.url);
-      
-      return { 
-        url: file.url,
-        uploadedBy: metadata.userId 
-      };
+      return { url: file.url, uploadedBy: metadata.userId };
+    }),
+
+  chatFile: f({
+    image: { maxFileSize: '4MB', maxFileCount: 1 },
+    pdf: { maxFileSize: '4MB', maxFileCount: 1 },
+  })
+    .middleware(async () => {
+      const session = await auth();
+      if (!session?.user?.id) throw new Error('Not authenticated');
+      return { userId: session.user.id };
+    })
+    .onUploadComplete(async ({ metadata, file }) => {
+      return { url: file.url, uploadedBy: metadata.userId };
     }),
 } satisfies FileRouter;
 

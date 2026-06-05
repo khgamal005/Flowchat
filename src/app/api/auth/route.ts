@@ -1,45 +1,19 @@
-import { createClient } from "@/supabase/supabaseServer";
+import { auth } from "@/auth";
 import { NextResponse } from "next/server";
 
-// Handle GET requests (example: test Supabase connection)
 export async function GET() {
-  console.log("SUPABASE_URL:", process.env.NEXT_PUBLIC_SUPABASE_URL);
-  console.log("SUPABASE_KEY:",     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-);
+  const session = await auth();
 
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  if (!session) {
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
-  return NextResponse.json({ user });
+  return NextResponse.json({ user: session.user });
 }
 
-// Handle POST requests (sign up with email + password)
 export async function POST(req: Request) {
   const body = await req.json();
   const { email, password } = body;
 
-  // ✅ Use your helper
-  const supabase = await createClient();
-
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      emailRedirectTo: process.env.NEXT_PUBLIC_CURRENT_ORIGIN + "/auth/callback",
-    },
-  });
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
-  }
-
-  return NextResponse.json({ data });
+  return NextResponse.json({ error: "Use the auth page to sign in" }, { status: 400 });
 }

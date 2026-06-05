@@ -1,8 +1,8 @@
 import { RefObject, useEffect, useState } from 'react';
 
 type UseChatScrollHandlerProps = {
-  chatRef: RefObject<HTMLDivElement>;
-  bottomRef: RefObject<HTMLDivElement>;
+  chatRef: RefObject<HTMLDivElement | null>;
+  bottomRef: RefObject<HTMLDivElement | null>;
   count: number;
 };
 

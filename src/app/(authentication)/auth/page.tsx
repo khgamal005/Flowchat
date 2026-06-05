@@ -1,182 +1,56 @@
 'use client';
 
-import { BsSlack } from 'react-icons/bs';
 import { FcGoogle } from 'react-icons/fc';
-import { RxGithubLogo } from 'react-icons/rx';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
-import { Provider } from '@supabase/supabase-js';
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+import { signIn } from 'next-auth/react';
 
 import Typography from '@/components/ui/typography';
 import { Button } from '@/components/ui/button';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormMessage,
-} from '@/components/ui/form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { Input } from '@/components/ui/input';
-import { MdOutlineAutoAwesome } from 'react-icons/md';
-import { createClient } from '@/supabase/supabaseClient';
-import { registerWithEmail } from '@/actions/register-with-email';
 
 const AuthPage = () => {
-    const supabase = createClient();
-
   const [isAuthenticating, setIsAuthenticating] = useState(false);
-  const [isMounted, setIsMounted] = useState(false);
 
-  const router = useRouter();
-  const formSchema = z.object({
-    email: z.string().email().min(2, { message: 'Email must be 2 characters' }),
-  });
-
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      email: '',
-    },
-  });
-
-    useEffect(() => {
-    const getCurrUser = async () => {
-      const 
-      {
-        data: { session },
-      } = await supabase.auth.getSession();
-      
-      console.log(session);
-      if (session) {
-        return router.push('/');
-      }
-    };
-
-    getCurrUser();
-    setIsMounted(true);
-  }, [router]);
-
-    async function onSubmit(values: z.infer<typeof formSchema>) {
-      console.log(values)
+  async function socialAuth(provider: string) {
     setIsAuthenticating(true);
-    const response = await registerWithEmail(values);
-    const { data, error } = JSON.parse(response);
-    setIsAuthenticating(false);
-    if (error) {
-      console.warn('Sign in error', error);
-      return;
-    }
-  }
-
-    async function socialAuth(provider: Provider) {
-    setIsAuthenticating(true);
-
-  // ✅ Call the function to get the client instance
-    await supabase.auth.signInWithOAuth({
-      provider,
-      options: {
-        redirectTo: `${location.origin}/auth/callback`,
-      },
-    });
+    await signIn(provider, { redirectTo: '/' });
     setIsAuthenticating(false);
   }
-
 
   return (
-    <div className='min-h-screen p-5 grid text-center place-content-center bg-white'>
-      <div className='max-w-[450px]'>
-        <div className='flex justify-center items-center gap-3 mb-4'>
-          <BsSlack size={30} />
-          <Typography text='Slackzz' variant='h2' />
-        </div>
+    <div className='min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-4'>
+      <div className='w-full max-w-md'>
+        <div className='bg-white rounded-2xl shadow-xl shadow-indigo-100/50 p-8 sm:p-10'>
+          <div className='text-center mb-8'>
+            <div className='inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white text-2xl font-bold mb-4'>
+              F
+            </div>
+            <Typography
+              text='Flowchat'
+              variant='h2'
+              className='text-3xl font-bold text-gray-900'
+            />
+            <Typography
+              text='Sign in to your account'
+              variant='p'
+              className='text-gray-500 mt-2'
+            />
+          </div>
 
-        <Typography
-          text='Sign in to your Slackzz'
-          variant='h2'
-          className='mb-3'
-        />
-
-        <Typography
-          text='We suggest using the email address that you use at work'
-          variant='p'
-          className='opacity-90 mb-7'
-        />
-
-        <div className='flex flex-col space-y-4'>
           <Button
             disabled={isAuthenticating}
             variant='outline'
-            className='py-6 border-2 flex space-x-3'
+            className='w-full py-6 border-2 border-gray-200 hover:border-indigo-200 hover:bg-indigo-50/50 flex items-center justify-center gap-3 rounded-xl transition-all duration-200'
             onClick={() => socialAuth('google')}
           >
-            <FcGoogle size={30} />
-            <Typography
-              className='text-xl'
-              text='Sign in with Google'
-              variant='p'
-            />
-          </Button>
-                    <Button
-            disabled={isAuthenticating}
-            variant='outline'
-            className='py-6 border-2 flex space-x-3'
-            onClick={() => socialAuth('github')}
-          >
-            <RxGithubLogo size={30} />
-            <Typography
-              className='text-xl'
-              text='Sign in with Github'
-              variant='p'
-            />
+            <FcGoogle size={24} />
+            <span className='text-base font-medium text-gray-700'>
+              Continue with Google
+            </span>
           </Button>
 
-        </div>
-
-        <div>
-          <div className='flex items-center my-6'>
-            <div className='mr-[10px] flex-1 border-t bg-neutral-300' />
-            <Typography text='OR' variant='p' />
-            <div className='ml-[10px] flex-1 border-t bg-neutral-300' />
-          </div>
-
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)}>
-              <fieldset disabled={isAuthenticating}>
-                <FormField
-                  control={form.control}
-                  name='email'
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormControl>
-                        <Input placeholder='name@work-email.com' {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <Button
-                  className='bg-amber-300'
-                  type='submit'
-                >
-                  <Typography text='Sign in with Email'  />
-                </Button>
-
-                <div className='px-5 py-4 bg-gray-100 rounded-sm'>
-                  <div className='text-gray-500 flex items-center space-x-3'>
-                    <MdOutlineAutoAwesome />
-                    <Typography
-                      text='We will email you a magic link for a password-free sign-in'
-                      variant='p'
-                    />
-                  </div>
-                </div>
-              </fieldset>
-            </form>
-          </Form>
+          <p className='text-xs text-gray-400 text-center mt-6'>
+            By continuing, you agree to Flowchat&apos;s Terms of Service and Privacy Policy.
+          </p>
         </div>
       </div>
     </div>

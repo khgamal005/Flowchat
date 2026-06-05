@@ -1,25 +1,23 @@
 import { NextResponse } from 'next/server';
 
-import { getUserData } from '@/actions/get-user-data';
-import { createClient } from '@/supabase/supabaseServer';
+import { auth } from '@/auth';
+import { prisma } from '@/lib/prisma';
 
 function getPagination(page: number, size: number) {
   const limit = size ? +size : 10;
-  const from = page ? page * limit : 0;
-  const to = page ? from + limit - 1 : limit - 1;
+  const skip = page ? page * limit : 0;
 
-  return { from, to };
+  return { skip, take: limit };
 }
 
 export async function GET(req: Request) {
   try {
-    const supabase = await createClient();
-    const userData = await getUserData();
+    const session = await auth();
 
-    if (!userData) return new NextResponse('Unauthorized', { status: 401 });
+    if (!session?.user?.id) return new NextResponse('Unauthorized', { status: 401 });
 
     const { searchParams } = new URL(req.url);
-    const userId = userData.id;
+    const userId = session.user.id;
     const recipientId = searchParams.get('recipientId');
 
     if (!recipientId) return new NextResponse('Bad Request', { status: 400 });
@@ -27,23 +25,52 @@ export async function GET(req: Request) {
     const page = Number(searchParams.get('page'));
     const size = Number(searchParams.get('size'));
 
-    const { from, to } = getPagination(page, size);
+    const { skip, take } = getPagination(page, size);
 
-    const { data, error } = await supabase
-      .from('direct_messages')
-      .select(`*, user_one:user_one (*), user_two:user_two (*), user: user (*)`)
-      .or(
-        `and(user_one.eq.${userId}), user_two.eq.${recipientId}, and(user_one.eq.${recipientId}), user_two.eq.${userId})`
-      )
-      .range(from, to)
-      .order('created_at', { ascending: true });
+    const data = await prisma.directMessage.findMany({
+      where: {
+        OR: [
+          { userOne: userId, userTwo: recipientId },
+          { userOne: recipientId, userTwo: userId },
+        ],
+      },
+      include: {
+        sender: true,
+        userOneRel: true,
+        userTwoRel: true,
+      },
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take,
+    });
 
-    if (error) {
-      console.error('Error fetching direct messages', error);
-      return new NextResponse('Internal Server Error', { status: 500 });
-    }
+    const mapUser = (u: any) => ({
+      avatar_url: u.avatarUrl,
+      channels: null,
+      created_at: u.createdAt.toISOString(),
+      email: u.email,
+      id: u.id,
+      is_away: u.isAway,
+      name: u.name,
+      phone: u.phone,
+      type: u.type,
+      workspaces: null,
+    });
 
-    return NextResponse.json({ data });
+    const mapped = data.map(msg => ({
+      id: String(msg.id),
+      content: msg.content,
+      file_url: msg.fileUrl,
+      user_id: msg.user,
+      is_deleted: msg.isDeleted,
+      created_at: msg.createdAt.toISOString(),
+      updated_at: msg.updatedAt.toISOString(),
+      user: mapUser(msg.sender),
+      user_one: mapUser(msg.userOneRel),
+      user_two: mapUser(msg.userTwoRel),
+    }));
+
+    return NextResponse.json({ data: mapped });
   } catch (error) {
     console.error('Error fetching direct messages', error);
     return new NextResponse('Internal Server Error', { status: 500 });
