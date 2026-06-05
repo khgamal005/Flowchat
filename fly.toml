@@ -1,10 +1,5 @@
-# fly.toml app configuration file generated for flowchat on 2026-06-05T23:24:52Z
-#
-# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
-#
-
-app = 'flowchat'
-primary_region = 'iad'
+app = "slack-clone"
+primary_region = "iad"
 
 [build]
 
