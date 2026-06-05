@@ -1,6 +1,6 @@
 'use client';
 
-import { FC, useState } from 'react';
+import { FC, useEffect, useState } from 'react';
 import { FaArrowDown, FaArrowUp, FaPlus } from 'react-icons/fa6';
 import { useRouter } from 'next/navigation';
 
@@ -28,11 +28,16 @@ const InfoSection: FC<{
   currentChannelId,
 }) => {
   const { color } = useColorPreferences();
+  const [isMounted, setIsMounted] = useState(false);
   const [isChannelCollapsed, setIsChannelCollapsed] = useState(true);
   const [isDirectMessageCollapsed, setIsDirectMessageCollapsed] =
     useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   let backgroundColor = 'bg-primary-light';
   if (color === 'green') {
@@ -82,24 +87,26 @@ const InfoSection: FC<{
               <FaPlus onClick={() => setDialogOpen(true)} />
             </div>
           </div>
-          <CollapsibleContent>
-            {userWorkspaceChannels.map(channel => {
-              const activeChannel = currentChannelId === channel.id;
-              return (
-                <Typography
-                  key={channel.id}
-                  variant='p'
-                  text={`# ${channel.name}`}
-                  className={cn(
-                    'px-2 py-1 rounded-sm cursor-pointer',
-                    `hover:${secondayBg}`,
-                    activeChannel && secondayBg
-                  )}
-                  onClick={() => navigateToChannel(channel.id)}
-                />
-              );
-            })}
-          </CollapsibleContent>
+          {isMounted && (
+            <CollapsibleContent>
+              {userWorkspaceChannels.map(channel => {
+                const activeChannel = currentChannelId === channel.id;
+                return (
+                  <Typography
+                    key={channel.id}
+                    variant='p'
+                    text={`# ${channel.name}`}
+                    className={cn(
+                      'px-2 py-1 rounded-sm cursor-pointer',
+                      `hover:${secondayBg}`,
+                      activeChannel && secondayBg
+                    )}
+                    onClick={() => navigateToChannel(channel.id)}
+                  />
+                );
+              })}
+            </CollapsibleContent>
+          )}
         </Collapsible>
       </div>
       <div>
@@ -128,24 +135,26 @@ const InfoSection: FC<{
               <FaPlus />
             </div>
           </div>
-          <CollapsibleContent>
-            {currentWorkspaceData?.members
-              ?.filter(member => member.id !== userData.id)
-              .map(member => {
-              return (
-                <Typography
-                  key={member.id}
-                  variant='p'
-                  text={member.name || member.email}
-                  className={cn(
-                    'px-2 py-1 rounded-sm cursor-pointer',
-                    `hover:${secondayBg}`
-                  )}
-                  onClick={() => navigateToDirectMessage(member.id)}
-                />
-              );
-            })}
-          </CollapsibleContent>
+          {isMounted && (
+            <CollapsibleContent>
+              {currentWorkspaceData?.members
+                ?.filter(member => member.id !== userData.id)
+                .map(member => {
+                return (
+                  <Typography
+                    key={member.id}
+                    variant='p'
+                    text={member.name || member.email}
+                    className={cn(
+                      'px-2 py-1 rounded-sm cursor-pointer',
+                      `hover:${secondayBg}`
+                    )}
+                    onClick={() => navigateToDirectMessage(member.id)}
+                  />
+                );
+              })}
+            </CollapsibleContent>
+          )}
         </Collapsible>
       </div>
     </div>

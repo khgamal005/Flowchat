@@ -73,3 +73,18 @@ export const updateChannelRegulators = async (
   });
   return [data, null];
 };
+
+export const addChannelRegulator = async (
+  userId: string,
+  channelId: string
+) => {
+  await prisma.channelMember
+    .create({ data: { userId, channelId } })
+    .catch(() => {});
+  await prisma.userChannel
+    .create({ data: { userId, channelId } })
+    .catch(() => {});
+  await prisma.channelRegulator
+    .create({ data: { userId, channelId } })
+    .catch(() => {});
+};

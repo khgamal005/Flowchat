@@ -28,13 +28,17 @@ export const getUserWorkspaceChannels = async (
     where: {
       id: { in: channelIds },
     },
+    include: {
+      members: true,
+      regulators: true,
+    },
   });
 
   const userWorkspaceChannels: Channel[] = channelsData.map(c => ({
     id: c.id,
-    members: null,
+    members: c.members.map(m => m.userId),
     name: c.name,
-    regulators: null,
+    regulators: c.regulators.map(r => r.userId),
     user_id: c.userId,
     workspace_id: c.workspaceId,
     created_at: c.createdAt.toISOString(),
